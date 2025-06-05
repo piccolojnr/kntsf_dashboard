@@ -27,5 +27,4 @@ export type PermitFormValues = z.infer<typeof permitFormSchema>
 
 export interface CreatePermitData extends Omit<PermitFormValues, 'amountPaid'> {
   amountPaid: number
-  issuedById: number
 }

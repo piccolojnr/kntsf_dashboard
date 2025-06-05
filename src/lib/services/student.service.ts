@@ -1,9 +1,12 @@
-import { prisma } from '../prisma/client'
-import { Prisma, Student } from '@prisma/client'
+'use server'
+import prisma from '../prisma/client'
 import { parse } from 'csv-parse/sync'
 import { log } from '../logger'
+import { ServiceResponse, PaginatedResponse, StudentDetails } from '../types/common'
+import { Prisma, Student } from '@prisma/client'
 
-export interface StudentData {
+
+interface CreateStudentData {
   studentId: string
   name: string
   email: string
@@ -12,179 +15,182 @@ export interface StudentData {
   number: string
 }
 
-export interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
+
+export async function create(studentData: CreateStudentData): Promise<ServiceResponse<Student>> {
+  try {
+    const student = await prisma.student.create({
+      data: studentData
+    })
+    return { success: true, data: student }
+  } catch (error) {
+    log.error('Failed to create student:', error)
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: 'An unexpected error occurred' }
+  }
 }
 
-export class StudentService {
-  static async createStudent(
-    studentData: StudentData
-  ): Promise<{ success: boolean; data?: Student; error?: string }> {
-    try {
-      const student = await prisma.student.create({
-        data: studentData
-      })
-      return { success: true, data: student }
-    } catch (error: any) {
-      log.error('Failed to create student:', error)
-      return { success: false, error: error.message }
-    }
-  }
-
-  static async getStudents(params: {
-    page?: number
-    pageSize?: number
-    search?: string
-  }): Promise<{ success: boolean; data?: PaginatedResponse<Student>; error?: string }> {
-    try {
-      const { page = 1, pageSize = 10, search } = params
-      const where: Prisma.StudentWhereInput = search
-        ? {
-            OR: [
-              { name: { contains: search } },
-              { studentId: { contains: search } },
-              { email: { contains: search } },
-              { course: { contains: search } }
-            ]
-          }
-        : {}
-      const skip = Math.max((page - 1) * pageSize, 0)
-      const [total, students] = await Promise.all([
-        prisma.student.count({ where }),
-        prisma.student.findMany({
-          where,
-          skip,
-          take: pageSize,
-          orderBy: { createdAt: 'desc' }
-        })
-      ])
-
-      return {
-        success: true,
-        data: {
-          data: students,
-          total,
-          page,
-          pageSize,
-          totalPages: Math.ceil(total / pageSize)
-        }
+export async function getAll(params: {
+  page?: number
+  pageSize?: number
+  search?: string
+}): Promise<PaginatedResponse<Student>> {
+  try {
+    const { page = 1, pageSize = 10, search } = params
+    const where: Prisma.StudentWhereInput = search
+      ? {
+        OR: [
+          { name: { contains: search } },
+          { studentId: { contains: search } },
+          { email: { contains: search } },
+          { course: { contains: search } }
+        ]
       }
-    } catch (error: any) {
-      log.error('Error fetching students:', error)
+      : {}
+    const skip = Math.max((page - 1) * pageSize, 0)
+    const [total, students] = await Promise.all([
+      prisma.student.count({ where }),
+      prisma.student.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' }
+      })
+    ])
+
+    return {
+      success: true,
+      data: {
+        data: students,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    }
+  } catch (error) {
+    log.error('Error fetching students:', error)
+    if (error instanceof Error) {
       return { success: false, error: error.message }
     }
+    return { success: false, error: 'An unexpected error occurred' }
   }
+}
 
-  static async getStudentById(studentId: string): Promise<{
-    success: boolean
-    data?: Student & { permits: { issuedBy: { username: string } | null }[] }
-    error?: string
-  }> {
-    try {
-      const student = await prisma.student.findUnique({
-        where: { studentId: studentId },
-        include: {
-          permits: {
-            include: {
-              issuedBy: {
-                select: {
-                  username: true
-                }
+export async function getById(studentId: string): Promise<ServiceResponse<StudentDetails>> {
+  try {
+    const student = await prisma.student.findUnique({
+      where: { studentId: studentId },
+      include: {
+        permits: {
+          include: {
+            issuedBy: {
+              select: {
+                username: true
               }
             }
           }
         }
-      })
-
-      if (!student) {
-        return { success: false, error: 'Student not found' }
       }
+    })
 
-      return { success: true, data: student }
-    } catch (error: any) {
-      log.error('Failed to get student by ID:', error)
+    if (!student) {
+      return { success: false, error: 'Student not found' }
+    }
+
+    return { success: true, data: student }
+  } catch (error) {
+    log.error('Failed to get student by ID:', error)
+    if (error instanceof Error) {
       return { success: false, error: error.message }
     }
+    return { success: false, error: 'An unexpected error occurred' }
   }
+}
 
-  static async updateStudent(
-    studentId: string,
-    studentData: Partial<StudentData>
-  ): Promise<{ success: boolean; data?: Student; error?: string }> {
-    try {
-      const student = await prisma.student.update({
-        where: { studentId: studentId },
-        data: studentData
-      })
-      return { success: true, data: student }
-    } catch (error: any) {
-      log.error('Failed to update student:', error)
+export async function update(
+  studentId: string,
+  studentData: Partial<Student>
+): Promise<ServiceResponse<Student>> {
+  try {
+    const student = await prisma.student.update({
+      where: { studentId: studentId },
+      data: studentData
+    })
+    return { success: true, data: student }
+  } catch (error) {
+    log.error('Failed to update student:', error)
+    if (error instanceof Error) {
       return { success: false, error: error.message }
     }
+    return { success: false, error: 'An unexpected error occurred' }
   }
+}
 
-  static async deleteStudent(studentId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      await prisma.student.delete({
-        where: { studentId: studentId }
-      })
-      return { success: true }
-    } catch (error: any) {
-      log.error('Failed to delete student:', error)
+export async function deleteStudent(studentId: string): Promise<ServiceResponse<void>> {
+  try {
+    await prisma.student.delete({
+      where: { studentId: studentId }
+    })
+    return { success: true }
+  } catch (error) {
+    log.error('Failed to delete student:', error)
+    if (error instanceof Error) {
       return { success: false, error: error.message }
     }
+    return { success: false, error: 'An unexpected error occurred' }
   }
+}
 
-  static async importStudents(fileContent: string): Promise<{
-    success: boolean
-    data?: { imported: number; failed: number; errors: string[] }
-    error?: string
-  }> {
-    try {
-      const records = parse(fileContent, {
-        columns: true,
-        skip_empty_lines: true
-      })
+export async function importStudent(fileContent: string): Promise<ServiceResponse<{ imported: number; failed: number; errors: string[] }>> {
+  try {
+    const records = parse(fileContent, {
+      columns: true,
+      skip_empty_lines: true
+    })
 
-      const errors: string[] = []
-      let imported = 0
-      let failed = 0
+    const errors: string[] = []
+    let imported = 0
+    let failed = 0
 
-      for (const record of records) {
-        try {
-          await prisma.student.create({
-            data: {
-              studentId: record.studentId,
-              name: record.name,
-              email: record.email,
-              course: record.course,
-              level: record.level,
-              number: record.number
-            }
-          })
-          imported++
-        } catch (error: any) {
-          failed++
-          log.error(`Failed to import student ${record.studentId}:`, error)
+    for (const record of records) {
+      try {
+        await prisma.student.create({
+          data: {
+            studentId: record.studentId,
+            name: record.name,
+            email: record.email,
+            course: record.course,
+            level: record.level,
+            number: record.number
+          }
+        })
+        imported++
+      } catch (error) {
+        failed++
+        log.error(`Failed to import student ${record.studentId}:`, error)
+        if (error instanceof Error) {
           errors.push(`Failed to import student ${record.studentId}: ${error.message}`)
+        } else {
+          errors.push(`Failed to import student ${record.studentId}: Unknown error`)
         }
       }
+    }
 
-      return {
-        success: true,
-        data: {
-          imported,
-          failed,
-          errors
-        }
+    return {
+      success: true,
+      data: {
+        imported,
+        failed,
+        errors
       }
-    } catch (error: any) {
-      log.error('Error importing students:', error)
+    }
+  } catch (error) {
+    log.error('Error importing students:', error)
+    if (error instanceof Error) {
       return { success: false, error: error.message }
     }
+    return { success: false, error: 'An unexpected error occurred' }
   }
 }

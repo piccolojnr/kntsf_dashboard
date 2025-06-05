@@ -1,7 +1,9 @@
-import { prisma } from '../prisma/client'
+'use server'
+import prisma from '../prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { log } from '../logger'
+import { AuthorizedUser, ServiceResponse } from '../types/common'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
@@ -11,7 +13,7 @@ export interface LoginCredentials {
 }
 
 export interface AuthResponse {
-  user: any
+  user: AuthorizedUser
   token: string
 }
 
@@ -23,8 +25,12 @@ export interface JWT_Response {
   exp: number
 }
 
-export class AuthService {
-  static async login(credentials: LoginCredentials): Promise<AuthResponse> {
+export async function login(credentials: LoginCredentials): Promise<ServiceResponse<AuthResponse>> {
+  if (!credentials.username || !credentials.password) {
+    log.error('Username and password are required')
+    return { success: false, error: 'Username and password are required' }
+  }
+  try {
     const user = await prisma.user.findUnique({
       where: { username: credentials.username },
       include: {
@@ -42,41 +48,56 @@ export class AuthService {
 
     if (!user) {
       log.error('Invalid credentials')
-      throw new Error('Invalid credentials')
+      return { success: false, error: 'Invalid credentials' }
     }
 
     const isValidPassword = await bcrypt.compare(credentials.password, user.password)
     if (!isValidPassword) {
       log.error('Invalid credentials')
-      throw new Error('Invalid credentials')
+      return { success: false, error: 'Invalid credentials' }
     }
 
     const token = jwt.sign(
       {
         userId: user.id,
         role: user.role.name,
-        permissions: user.role.permissions.map((rp) => rp.permission.name)
+        permissions: user.role.permissions.map((rp: { permission: { name: any } }) => rp.permission.name)
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     )
 
     return {
-      user,
-      token
+      success: true,
+      data: {
+        user,
+        token
+      }
     }
-  }
-
-  static async verifyToken(token: string): Promise<JWT_Response> {
-    try {
-      return jwt.verify(token, JWT_SECRET) as JWT_Response
-    } catch (error) {
-      log.error('Token verification error:', error)
-      throw new Error('Invalid token')
+  } catch (error) {
+    log.error('Login error:', error)
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
     }
+    return { success: false, error: 'An unexpected error occurred' }
   }
+}
 
-  static async getUserPermissions(userId: number): Promise<string[]> {
+export async function verifyToken(token: string): Promise<ServiceResponse<JWT_Response>> {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JWT_Response
+    return { success: true, data: decoded }
+  } catch (error) {
+    log.error('Token verification error:', error)
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: 'Invalid token' }
+  }
+}
+
+export async function getUserPermissions(userId: number): Promise<ServiceResponse<string[]>> {
+  try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -93,14 +114,24 @@ export class AuthService {
     })
 
     if (!user) {
-      log.error('User not found')
-      throw new Error('User not found')
+      return { success: false, error: 'User not found' }
     }
 
-    return user.role.permissions.map((rp) => rp.permission.name)
+    return {
+      success: true,
+      data: user.role.permissions.map((rp: { permission: { name: any } }) => rp.permission.name)
+    }
+  } catch (error) {
+    log.error('Failed to get user permissions:', error)
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: 'An unexpected error occurred' }
   }
+}
 
-  static async getUserById(userId: number): Promise<any> {
+export async function getUserById(userId: number): Promise<ServiceResponse> {
+  try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -117,10 +148,15 @@ export class AuthService {
     })
 
     if (!user) {
-      log.error('User not found')
-      throw new Error('User not found')
+      return { success: false, error: 'User not found' }
     }
 
-    return user
+    return { success: true, data: user }
+  } catch (error) {
+    log.error('Failed to get user:', error)
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: 'An unexpected error occurred' }
   }
 }

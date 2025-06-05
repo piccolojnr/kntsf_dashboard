@@ -1,27 +1,14 @@
 import { PrismaClient } from '@prisma/client'
-import { log } from '../logger'
+import { withAccelerate } from '@prisma/extension-accelerate'
 
-const prisma =
-  // globalForPrisma.prisma ??
-  new PrismaClient({
-    log: [
-      { emit: 'event', level: 'error' },
-      { emit: 'event', level: 'warn' },
-      { emit: 'event', level: 'info' }
-    ]
-  })
+const globalForPrisma = global as unknown as {
+  prisma: PrismaClient
+}
 
-prisma.$on('error', (e) => {
-  log('🛑 PRISMA ERROR:', e.message)
-})
+const prisma = globalForPrisma.prisma || new PrismaClient().$extends(withAccelerate())
 
-prisma.$on('warn', (e) => {
-  log('⚠️ PRISMA WARNING:', e.message)
-})
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-prisma.$on('info', (e) => {
-  log('ℹ️ PRISMA INFO:', e.message)
-})
 
-export { prisma }
-// if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+export default prisma

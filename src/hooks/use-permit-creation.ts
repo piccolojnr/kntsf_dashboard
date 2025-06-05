@@ -1,12 +1,30 @@
 import { toast } from 'sonner'
-import { sendPermitEmails } from '../lib/email/permit-email-service'
 import { CreatePermitData } from '../lib/schemas/permit-schema'
+import services from '@/lib/services'
+
+interface PermitEmailData {
+  student: {
+    email: string
+    name: string
+    studentId: string
+    course: string
+    level: string
+  }
+  permit: {
+    id: string
+    amountPaid: number
+    expiryDate: Date
+  }
+  qrCode: string
+  permitCode: string
+}
+
 
 export function usePermitCreation() {
   const createPermit = async (data: CreatePermitData) => {
     try {
       // API call to create permit
-      const response = await window.api.permit.create(data)
+      const response = await services.permit.create(data)
 
       if (!response.success) {
         throw new Error('Failed to create permit')
@@ -16,16 +34,23 @@ export function usePermitCreation() {
 
       // Send emails if student email exists
       if (response.data?.student.email && response.data) {
-        const permitResponse = {
-          ...response,
-          data: {
-            ...response.data,
-            id: response.data.id.toString()
+        const permitResponse: PermitEmailData = {
+          student: {
+            email: response.data.student.email,
+            name: response.data.student.name,
+            studentId: response.data.student.id.toString(),
+            course: response.data.student.course,
+            level: response.data.student.level
+          },
+          permit: {
+            id: response.data.id.toString(),
+            amountPaid: response.data.amountPaid,
+            expiryDate: response.data.expiryDate
           },
           qrCode: response.qrCode || '',
           permitCode: response.permitCode || ''
         }
-        await sendPermitEmails(permitResponse)
+        await services.email.sendPermitEmails(permitResponse)
       }
 
       return response

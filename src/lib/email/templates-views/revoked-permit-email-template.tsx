@@ -48,8 +48,8 @@ export const generateRevokedPermitEmailTemplate = ({
             <Section style={header}>
               <Img
                 src={process.env.KNUTSFORD_LOGO_URL}
-                width="180"
-                height="60"
+                width="70"
+                height="80"
                 alt="Knutsford University"
                 style={logo}
               />

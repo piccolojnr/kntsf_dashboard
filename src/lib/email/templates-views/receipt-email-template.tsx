@@ -49,8 +49,8 @@ export const generateReceiptEmailTemplate = ({
             <Section style={header}>
               <Img
                 src={process.env.KNUTSFORD_LOGO_URL}
-                width="180"
-                height="60"
+                width="70"
+                height="80"
                 alt="Knutsford University"
                 style={logo}
               />
@@ -138,7 +138,7 @@ export const generateReceiptEmailTemplate = ({
                     alt="Receipt QR Code"
                     style={qrCode}
                   />
-                  <Text style={qrCodeText}>{receiptNumber}</Text>
+                  <Text style={qrCodeText}>{permitCode}</Text>
                 </Section>
               </Section>
 

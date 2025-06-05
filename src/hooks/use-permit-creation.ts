@@ -27,7 +27,7 @@ export function usePermitCreation() {
       const response = await services.permit.create(data)
 
       if (!response.success) {
-        throw new Error('Failed to create permit')
+        throw new Error(response.error || 'Failed to create permit')
       }
 
       toast.success('Permit created successfully')

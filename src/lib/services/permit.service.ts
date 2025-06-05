@@ -319,7 +319,7 @@ export async function checkValidity(permitId: number): Promise<ServiceResponse<{
 }
 
 function generatePermitCode(): string {
-  const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 5);
+  const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 4);
   return nanoid();
 
 }

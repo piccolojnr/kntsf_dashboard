@@ -38,7 +38,7 @@ export function usePermitCreation() {
           student: {
             email: response.data.student.email,
             name: response.data.student.name,
-            studentId: response.data.student.id.toString(),
+            studentId: response.data.student.studentId.toString(),
             course: response.data.student.course,
             level: response.data.student.level
           },

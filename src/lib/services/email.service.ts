@@ -6,6 +6,7 @@ import { generatePermitEmailTemplate } from '../email/templates-views/permit-ema
 import { generateReceiptEmailTemplate } from '../email/templates-views/receipt-email-template'
 import { generateRevokedPermitEmailTemplate } from '../email/templates-views/revoked-permit-email-template'
 import { render } from '@react-email/components'
+import { handleError } from '../utils'
 
 // Create a transporter using Gmail
 const transporter = nodemailer.createTransport({
@@ -78,17 +79,14 @@ export async function sendEmail(options: EmailOptions): Promise<ServiceResponse>
     return { success: true }
   } catch (error) {
     log.error('Error sending email:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
 export async function sendPermitEmails(data: PermitEmailData): Promise<ServiceResponse> {
   try {
     const { student, permit, qrCode, permitCode } = data
-    const base64Image = qrCode.split(',')[1] // removes "data:image/png;base64,"
 
     // Send permit details email
     const permitEmail = generatePermitEmailTemplate({ student, permit, permitCode, qrCode })
@@ -100,28 +98,19 @@ export async function sendPermitEmails(data: PermitEmailData): Promise<ServiceRe
     })
 
     // Send receipt email
-    const receiptEmail = generateReceiptEmailTemplate({ student, permit, permitCode })
+    const receiptEmail = generateReceiptEmailTemplate({ student, permit, permitCode, qrCode })
     await sendEmail({
       to: student.email,
       subject: `Knutsford University SRC - Payment Receipt (${permitCode})`,
       template: receiptEmail,
-      attachments: [
-        {
-          filename: "receipt-qr-code.png",
-          content: base64Image,
-          encoding: 'base64',
-          cid: 'qr-code.png'
-        }
-      ]
+
     })
 
     return { success: true }
   } catch (error) {
     log.error('Error sending permit emails:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -141,9 +130,7 @@ export async function sendRevokedPermitEmail(
     return { success: true }
   } catch (error) {
     log.error('Error sending revoked permit email:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }

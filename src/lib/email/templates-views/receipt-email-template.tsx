@@ -26,12 +26,14 @@ interface ReceiptEmailTemplateProps {
     expiryDate: Date;
   };
   permitCode: string;
+  qrCode: string; // Assuming QR code is a string URL or base64 encoded image
 }
 
 export const generateReceiptEmailTemplate = ({
   student,
   permit,
   permitCode,
+  qrCode,
 }: ReceiptEmailTemplateProps) => {
   const previewText = `Payment Receipt - Knutsford University SRC - ${permitCode}`;
   const receiptNumber = `RCP-${permit.id.slice(-8).toUpperCase()}`;
@@ -132,11 +134,11 @@ export const generateReceiptEmailTemplate = ({
                 </Text>
                 <Section style={qrContainer}>
                   <Img
-                    src="cid:qr-code.png"
+                    src={qrCode}
                     width="150"
                     height="150"
                     alt="Receipt QR Code"
-                    style={qrCode}
+                    style={qrCodeStyle}
                   />
                   <Text style={qrCodeText}>{permitCode}</Text>
                 </Section>
@@ -410,7 +412,7 @@ const qrContainer = {
   display: "inline-block",
 };
 
-const qrCode = {
+const qrCodeStyle = {
   margin: "0 auto 12px",
   border: "2px solid #ffffff",
   borderRadius: "4px",

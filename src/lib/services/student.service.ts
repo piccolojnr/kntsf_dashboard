@@ -4,6 +4,7 @@ import { parse } from 'csv-parse/sync'
 import { log } from '../logger'
 import { ServiceResponse, PaginatedResponse, StudentDetails } from '../types/common'
 import { Prisma, Student } from '@prisma/client'
+import { handleError } from '../utils'
 
 
 interface CreateStudentData {
@@ -24,10 +25,7 @@ export async function create(studentData: CreateStudentData): Promise<ServiceRes
     return { success: true, data: student }
   } catch (error) {
     log.error('Failed to create student:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
@@ -71,10 +69,10 @@ export async function getAll(params: {
     }
   } catch (error) {
     log.error('Error fetching students:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    // if (error instanceof Error) {
+    //   return { success: false, error: error.message }
+    // }
+    return handleError(error)
   }
 }
 
@@ -102,10 +100,7 @@ export async function getById(studentId: string): Promise<ServiceResponse<Studen
     return { success: true, data: student }
   } catch (error) {
     log.error('Failed to get student by ID:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
@@ -121,25 +116,32 @@ export async function update(
     return { success: true, data: student }
   } catch (error) {
     log.error('Failed to update student:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
 export async function deleteStudent(studentId: string): Promise<ServiceResponse<void>> {
   try {
-    await prisma.student.delete({
-      where: { studentId: studentId }
+    await prisma.$transaction(async (tx) => {
+      const st = await tx.student.findUnique({
+        where: { studentId: studentId }
+      })
+      if (!st) {
+        throw new Error('Student not found')
+      }
+      await tx.permit.deleteMany({
+        where: {
+          studentId: st.id
+        }
+      })
+      await tx.student.delete({
+        where: { studentId: studentId }
+      })
     })
     return { success: true }
   } catch (error) {
     log.error('Failed to delete student:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
@@ -188,9 +190,6 @@ export async function importStudent(fileContent: string): Promise<ServiceRespons
     }
   } catch (error) {
     log.error('Error importing students:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }

@@ -3,7 +3,7 @@ import prisma from '../prisma/client'
 import { hash } from 'bcryptjs'
 import { log } from '../logger'
 import { AuthorizedUser, ServiceResponse } from '../types/common'
-import { Prisma } from '@prisma/client'
+import { handleError } from '../utils'
 
 export interface UserData {
   username: string
@@ -37,10 +37,7 @@ export async function create(userData: UserData): Promise<ServiceResponse<Author
     return { success: true, data: user }
   } catch (error) {
     log.error('Failed to create user:', error)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
@@ -97,10 +94,7 @@ export async function update(userId: number, userData: Partial<UserData>): Promi
     return { success: true, data: user }
   } catch (error) {
     log.error('Failed to update user:', error)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
@@ -123,10 +117,7 @@ export async function deleteUser(userId: number): Promise<ServiceResponse<Author
     return { success: true, data: user }
   } catch (error) {
     log.error('Failed to delete user:', error)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
@@ -151,10 +142,7 @@ export async function search(query: string): Promise<ServiceResponse<AuthorizedU
     return { success: true, data: users }
   } catch (error) {
     log.error('Failed to search users:', error)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }
 
@@ -176,9 +164,6 @@ export async function getAll(): Promise<ServiceResponse<AuthorizedUser[]>> {
     return { success: true, data: users }
   } catch (error) {
     log.error('Failed to get all users:', error)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
   }
 }

@@ -2,6 +2,7 @@
 import { log } from '../logger'
 import prisma from '../prisma/client'
 import { ServiceResponse } from '../types/common'
+import { handleError } from '../utils'
 
 export interface DashboardStats {
   totalStudents: number
@@ -52,9 +53,7 @@ export async function getStats(): Promise<ServiceResponse<DashboardStats>> {
     }
   } catch (error) {
     log.error('Failed to get dashboard stats:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }

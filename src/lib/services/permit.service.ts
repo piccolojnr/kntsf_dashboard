@@ -8,6 +8,7 @@ import { customAlphabet } from 'nanoid'
 import { ServiceResponse, StudentPermit } from '../types/common'
 import { getSession } from '../auth/auth'
 import services from '.'
+import { handleError } from '../utils'
 
 export interface PermitData {
   studentId: string
@@ -169,10 +170,8 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
     }
   } catch (error: any) {
     log.error('Error creating permit:', error)
-    return {
-      success: false,
-      error: error.message
-    }
+    return handleError(error)
+
   }
 }
 
@@ -245,10 +244,8 @@ export async function revoke(permitId: number): Promise<ServiceResponse<StudentP
     }
   } catch (error: any) {
     log.error('Error revoking permit:', error)
-    return {
-      success: false,
-      error: error.message
-    }
+    return handleError(error)
+
   }
 }
 
@@ -330,10 +327,8 @@ export async function checkValidity(permitId: number): Promise<ServiceResponse<{
     }
   } catch (error: any) {
     log.error('Error checking permit validity:', error)
-    return {
-      success: false,
-      error: error.message
-    }
+    return handleError(error)
+
   }
 }
 

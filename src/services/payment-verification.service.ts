@@ -140,6 +140,7 @@ export class PaymentVerificationService {
             if (event === 'charge.success') {
                 const payment = await prisma.payment.findFirst({
                     where: { paystackRef: data.reference },
+                    include: { student: true },
                 })
 
                 if (!payment) {
@@ -159,13 +160,26 @@ export class PaymentVerificationService {
                 })
 
                 // Create permit if payment is successful
-                // TODO: get expiry date from config or environment variable
-                await services.permit.create({
-                    studentId: payment.studentId + "",
-                    paymentId: payment.id,
-                    amountPaid: payment.amount,
-                    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-                })
+                if (!payment.permitId) {
+                    await services.permit.create({
+                        studentId: payment.student.studentId + "",
+                        paymentId: payment.id,
+                        amountPaid: payment.amount,
+                        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+                    })
+                } else if (payment.permitId) {
+                    await prisma.permit.findUnique({
+                        where: { id: payment.permitId },
+                        include: {
+                            student: true,
+                            issuedBy: {
+                                select: {
+                                    username: true
+                                }
+                            }
+                        }
+                    })
+                }
             }
 
             return { success: true }

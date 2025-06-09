@@ -22,8 +22,6 @@ export async function POST(request: Request) {
             )
         }
 
-
-
         const response = await PaymentService.initiatePayment(paymentRequest)
 
         return NextResponse.json(response)

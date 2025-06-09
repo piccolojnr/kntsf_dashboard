@@ -3,6 +3,7 @@ import { Permission, Role } from '@prisma/client'
 import { log } from '../logger'
 import prisma from '../prisma/client'
 import { ServiceResponse } from '../types/common'
+import { handleError } from '../utils'
 
 export interface PermissionData {
   name: string
@@ -17,10 +18,8 @@ export async function create(permissionData: PermissionData): Promise<ServiceRes
     return { success: true, data: permission }
   } catch (error) {
     log.error('Failed to create permission:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -42,10 +41,8 @@ export async function getById(permissionId: number): Promise<ServiceResponse> {
     return { success: true, data: permission }
   } catch (error) {
     log.error('Failed to get permission by ID:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -61,10 +58,8 @@ export async function update(
     return { success: true, data: permission }
   } catch (error) {
     log.error('Failed to update permission:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -76,10 +71,8 @@ export async function deletePermission(permissionId: number): Promise<ServiceRes
     return { success: true }
   } catch (error) {
     log.error('Failed to delete permission:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -101,10 +94,8 @@ export async function getAll(): Promise<ServiceResponse<(Permission & {
     return { success: true, data: permissions }
   } catch (error) {
     log.error('Failed to retrieve all permissions:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -122,9 +113,7 @@ export async function getByRoleId(roleId: number): Promise<ServiceResponse<Permi
     return { success: true, data: permissions }
   } catch (error) {
     log.error('Failed to get permissions by role ID:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }

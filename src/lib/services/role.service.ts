@@ -2,6 +2,7 @@
 import { log } from '../logger'
 import prisma from '../prisma/client'
 import { RoleWithPermissions, ServiceResponse } from '../types/common'
+import { handleError } from '../utils'
 
 export interface RoleData {
   name: string
@@ -34,10 +35,8 @@ export async function create(roleData: RoleData): Promise<ServiceResponse> {
     return { success: true, data: role }
   } catch (error) {
     log.error('Failed to create role:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -59,10 +58,8 @@ export async function getById(roleId: number): Promise<ServiceResponse> {
     return { success: true, data: role }
   } catch (error) {
     log.error('Failed to get role by ID:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -105,10 +102,8 @@ export async function update(roleId: number, roleData: Partial<RoleData>): Promi
     return { success: true, data: role }
   } catch (error) {
     log.error('Failed to update role:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -120,10 +115,8 @@ export async function deleteRole(roleId: number): Promise<ServiceResponse> {
     return { success: true }
   } catch (error) {
     log.error('Failed to delete role:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -141,9 +134,7 @@ export async function getAll(): Promise<ServiceResponse<RoleWithPermissions[]>> 
     return { success: true, data: roles }
   } catch (error) {
     log.error('Failed to retrieve all roles:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }

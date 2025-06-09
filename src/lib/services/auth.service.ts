@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { log } from '../logger'
 import { AuthorizedUser, ServiceResponse } from '../types/common'
+import { handleError } from '../utils'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
@@ -76,10 +77,8 @@ export async function login(credentials: LoginCredentials): Promise<ServiceRespo
     }
   } catch (error) {
     log.error('Login error:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -123,10 +122,8 @@ export async function getUserPermissions(userId: number): Promise<ServiceRespons
     }
   } catch (error) {
     log.error('Failed to get user permissions:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }
 
@@ -154,9 +151,7 @@ export async function getUserById(userId: number): Promise<ServiceResponse> {
     return { success: true, data: user }
   } catch (error) {
     log.error('Failed to get user:', error)
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: 'An unexpected error occurred' }
+    return handleError(error)
+
   }
 }

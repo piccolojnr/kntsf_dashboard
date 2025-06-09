@@ -91,19 +91,12 @@ export async function sendPermitEmails(data: PermitEmailData): Promise<ServiceRe
     const base64Image = qrCode.split(',')[1] // removes "data:image/png;base64,"
 
     // Send permit details email
-    const permitEmail = generatePermitEmailTemplate({ student, permit, permitCode })
+    const permitEmail = generatePermitEmailTemplate({ student, permit, permitCode, qrCode })
     await sendEmail({
       to: student.email,
       subject: `Knutsford University SRC - Permit Issued (${permitCode})`,
       template: permitEmail,
-      attachments: [
-        {
-          filename: 'qr-code.png',
-          content: base64Image,
-          encoding: 'base64',
-          cid: 'qr-code.png'
-        }
-      ]
+
     })
 
     // Send receipt email

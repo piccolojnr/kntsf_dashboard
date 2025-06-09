@@ -2,22 +2,6 @@ import { toast } from 'sonner'
 import { CreatePermitData } from '../lib/schemas/permit-schema'
 import services from '@/lib/services'
 
-interface PermitEmailData {
-  student: {
-    email: string
-    name: string
-    studentId: string
-    course: string
-    level: string
-  }
-  permit: {
-    id: string
-    amountPaid: number
-    expiryDate: Date
-  }
-  qrCode: string
-  permitCode: string
-}
 
 
 export function usePermitCreation() {
@@ -31,26 +15,8 @@ export function usePermitCreation() {
       }
 
       toast.success('Permit created successfully')
-
-      // Send emails if student email exists
-      if (response.data?.student.email && response.data) {
-        const permitResponse: PermitEmailData = {
-          student: {
-            email: response.data.student.email,
-            name: response.data.student.name,
-            studentId: response.data.student.studentId.toString(),
-            course: response.data.student.course,
-            level: response.data.student.level
-          },
-          permit: {
-            id: response.data.id.toString(),
-            amountPaid: response.data.amountPaid,
-            expiryDate: response.data.expiryDate
-          },
-          qrCode: response.qrCode || '',
-          permitCode: response.permitCode || ''
-        }
-        await services.email.sendPermitEmails(permitResponse)
+      if (response.error) {
+        toast.error(response.error)
       }
 
       return response

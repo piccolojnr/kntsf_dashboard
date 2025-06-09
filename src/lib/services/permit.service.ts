@@ -1,17 +1,18 @@
 'use server'
 import prisma from '../prisma/client'
 import bcrypt from 'bcryptjs'
-import QRCode from 'qrcode'
 import { BASE_URL } from '../constants'
 import { log } from '../logger'
 import { Permit, Prisma, Student } from "@prisma/client"
 import { customAlphabet } from 'nanoid'
 import { ServiceResponse, StudentPermit } from '../types/common'
 import { getSession } from '../auth/auth'
+import services from '.'
 
 export interface PermitData {
   studentId: string
   amountPaid: number
+  paymentId?: number
   expiryDate: Date
 }
 
@@ -101,9 +102,9 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
   try {
     const session = await getSession()
 
-    if (!session || !session.user) {
-      return { success: false, error: 'Unauthorized' }
-    }
+    // if (!session || !session.user) {
+    //   return { success: false, error: 'Unauthorized' }
+    // }
 
     // check student id
     const student = await prisma.student.findUnique({
@@ -122,10 +123,11 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
       data: {
         permitCode: hashedCode,
         originalCode: permitCode,
+        payment: permitData.paymentId ? { connect: { id: permitData.paymentId } } : undefined,
         expiryDate: permitData.expiryDate,
         amountPaid: permitData.amountPaid,
         studentId: student.id,
-        issuedById: parseInt((session.user as any).id),
+        issuedById: session ? parseInt((session.user as any).id) : null,
         status: 'active'
       },
       include: {
@@ -140,13 +142,30 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
 
     // Generate QR Code
     const verificationUrl = `${BASE_URL}/verify?code=${permitCode}`
-    const qrCode = await QRCode.toDataURL(verificationUrl)
+    const qrCode = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(verificationUrl)}&size=200x200`
 
+    const res = await services.email.sendPermitEmails({
+      student: {
+        email: student.email,
+        name: student.name,
+        studentId: student.studentId,
+        course: student.course,
+        level: student.level
+      },
+      permit: {
+        id: permit.id.toString(),
+        amountPaid: permit.amountPaid,
+        expiryDate: permit.expiryDate
+      },
+      qrCode,
+      permitCode
+    })
     return {
       success: true,
-      data: permit,
+      qrCode,
       permitCode,
-      qrCode
+      data: permit,
+      error: res.success ? undefined : res.error
     }
   } catch (error: any) {
     log.error('Error creating permit:', error)

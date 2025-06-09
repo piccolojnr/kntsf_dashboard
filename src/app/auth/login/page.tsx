@@ -33,7 +33,6 @@ export default function Login() {
         password: password,
         redirect: false,
       });
-
       if (result?.error) {
         toast.error("Invalid username or password");
         return;
@@ -41,7 +40,6 @@ export default function Login() {
 
       if (result?.ok) {
         router.push("/dashboard");
-        router.refresh();
       }
     } catch (error) {
       console.error("Login error:", error);

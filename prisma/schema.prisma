@@ -50,16 +50,17 @@ model RolePermission {
 }
 
 model Student {
-  id        Int      @id @default(autoincrement())
-  studentId String   @unique
+  id        Int       @id @default(autoincrement())
+  studentId String    @unique
   name      String
   email     String
   course    String
   level     String
   number    String
   permits   Permit[] // Permits issued to this student
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  payments  Payment[] // Payments made by this student
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Permit {
@@ -74,6 +75,7 @@ model Permit {
   studentId    Int
   issuedBy     User?    @relation(fields: [issuedById], references: [id])
   issuedById   Int?
+  payment      Payment? // Payment record for this permit
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -94,4 +96,27 @@ model RecoveryToken {
   token     String   @unique
   expires   DateTime
   createdAt DateTime @default(now())
+}
+
+model Payment {
+  id               Int           @id @default(autoincrement())
+  student          Student       @relation(fields: [studentId], references: [id])
+  studentId        Int
+  amount           Float
+  currency         String        @default("GHS")
+  paymentReference String        @unique
+  paystackRef      String?       @unique
+  status           PaymentStatus @default(PENDING)
+  permit           Permit?       @relation(fields: [permitId], references: [id])
+  permitId         Int?          @unique
+  metadata         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
 }

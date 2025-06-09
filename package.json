@@ -6,7 +6,13 @@
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "prisma:format": "prisma format",
+    "prisma:migrate": "prisma migrate dev --create-only",
+    "prisma:reset": "prisma migrate reset --force --skip-seed",
+    "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",
@@ -69,6 +75,7 @@
     "eslint-config-next": "15.3.3",
     "prisma": "^6.9.0",
     "tailwindcss": "^4",
+    "tsx": "^4.19.4",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5"
   }

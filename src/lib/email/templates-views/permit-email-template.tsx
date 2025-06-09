@@ -26,12 +26,14 @@ interface PermitEmailTemplateProps {
     expiryDate: Date;
   };
   permitCode: string;
+  qrCode?: string; // Optional QR code image
 }
 
 export const generatePermitEmailTemplate = ({
   student,
   permit,
   permitCode,
+  qrCode,
 }: PermitEmailTemplateProps) => {
   const previewText = `Your Knutsford University SRC Permit - ${permitCode}`;
 
@@ -128,11 +130,11 @@ export const generatePermitEmailTemplate = ({
                 </Text>
                 <Section style={qrContainer}>
                   <Img
-                    src="cid:qr-code.png"
+                    src={qrCode}
                     width="200"
                     height="200"
                     alt="Permit QR Code"
-                    style={qrCode}
+                    style={qrCodeImg}
                   />
                   <Text style={qrCodeText}>{permitCode}</Text>
                 </Section>
@@ -363,7 +365,7 @@ const qrContainer = {
   display: "inline-block",
 };
 
-const qrCode = {
+const qrCodeImg = {
   margin: "0 auto 16px",
   border: "4px solid #ffffff",
   borderRadius: "8px",

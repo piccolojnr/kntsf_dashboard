@@ -22,6 +22,7 @@ import { getInitials } from "../../lib/utils";
 import services from "@/lib/services";
 import { SessionUser } from "@/lib/types/common";
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 
 export function NavUser({ user }: { user: SessionUser }) {
   const { isMobile } = useSidebar();
@@ -106,7 +107,7 @@ export function NavUser({ user }: { user: SessionUser }) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="w-8 h-8 rounded-lg">
-                <AvatarImage src={undefined} alt={user?.username} />
+                <AvatarImage src={user.image || ""} alt={user?.username} />
                 <AvatarFallback className="rounded-lg">
                   {getInitials(user?.username || "User")}
                 </AvatarFallback>
@@ -127,7 +128,7 @@ export function NavUser({ user }: { user: SessionUser }) {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="w-8 h-8 rounded-lg">
-                  <AvatarImage src={undefined} alt={user?.username} />
+                  <AvatarImage src={user.image || ""} alt={user?.username} />
                   <AvatarFallback className="rounded-lg">
                     {getInitials(user?.username || "User")}
                   </AvatarFallback>
@@ -143,13 +144,11 @@ export function NavUser({ user }: { user: SessionUser }) {
             <DropdownMenuSeparator />
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/profile">
+                  <BadgeCheck />
+                  Account
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

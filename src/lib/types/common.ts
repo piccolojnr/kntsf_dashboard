@@ -20,6 +20,7 @@ export type PaginatedResponse<T> = ServiceResponse<PaginatedData<T>>
 export type SessionUser = {
     id: number;
     username: string;
+    image?: string | null;
     email: string;
     role: {
         id: number;

@@ -6,6 +6,7 @@ import {
   Users,
   Shield,
   Search,
+  User,
 } from "lucide-react";
 import * as React from "react";
 import { NavMain } from "./nav-main";
@@ -55,6 +56,12 @@ export function AppSidebar({
         url: "/dashboard",
         icon: BarChart3,
         isActive: true,
+      },
+      {
+        title: "Profile",
+        url: "/dashboard/profile",
+        icon: User,
+        show: () => true, // Always show for logged-in users
       },
       {
         title: "Permits",

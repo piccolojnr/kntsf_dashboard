@@ -8,17 +8,24 @@ datasource db {
 }
 
 model User {
-  id             Int             @id @default(autoincrement())
-  username       String          @unique
-  email          String          @unique
-  password       String // Hashed password
-  role           Role            @relation(fields: [roleId], references: [id])
-  roleId         Int
-  permits        Permit[] // Permits issued by this user
-  auditLogs      AuditLog[]
-  recoveryTokens RecoveryToken[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                  Int             @id @default(autoincrement())
+  username            String          @unique
+  name                String          @default("")
+  email               String          @unique
+  image               String? // URL to user profile image
+  password            String // Hashed password
+  role                Role            @relation(fields: [roleId], references: [id])
+  roleId              Int
+  position            String? // Executive position/title
+  positionDescription String?         @db.Text // Short summary of role
+  biography           String?         @db.Text // User profile
+  socialLinks         Json? // Social media links stored as JSON
+  category            String? // Classification (main_executive, other_executive, all_present)
+  permits             Permit[] // Permits issued by this user
+  auditLogs           AuditLog[]
+  recoveryTokens      RecoveryToken[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 }
 
 model Role {

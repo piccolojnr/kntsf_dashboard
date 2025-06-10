@@ -25,7 +25,7 @@ async function main() {
         await prisma.permission.upsert({
             where: {
                 name: permission.name,
-                description: permission.description
+                description: permission.description,
             },
             update: {},
             create: permission,
@@ -53,8 +53,8 @@ async function main() {
             ],
         },
         {
-            name: 'staff',
-            description: 'Staff member with limited access',
+            name: 'executive',
+            description: 'Executive member with limited access',
             permissions: [
                 'create_permits',
                 'view_permits',
@@ -62,17 +62,7 @@ async function main() {
                 'manage_settings',
                 'view_reports',
             ],
-        },
-        {
-            name: 'viewer',
-            description: 'View-only access',
-            permissions: [
-                'view_permits',
-                'manage_settings',
-                'view_students',
-                'view_reports',
-            ],
-        },
+        }
     ];
 
     console.log('Creating roles...');
@@ -109,6 +99,156 @@ async function main() {
                 },
             });
         }
+    }
+
+    // Get the executive role
+    const executiveRole = await prisma.role.findUnique({
+        where: { name: 'executive' },
+    });
+
+    if (!executiveRole) {
+        throw new Error('Executive role not found');
+    }
+
+    // Create executive users
+    const executives = [
+        {
+            name: "Naeem Latif Menard",
+            position: "Public Relations Officer",
+            positionDescription: "Leading communication and public engagement initiatives",
+            biography: "Dedicated to enhancing student communication and fostering positive relationships between the student body and administration.",
+            category: "main_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/naeem-menard",
+                twitter: "https://twitter.com/naeem_menard"
+            }
+        },
+        {
+            name: "Kwuatsenu Naana Divine",
+            position: "Deputy Public Relations Officer",
+            positionDescription: "Supporting PR initiatives and student engagement",
+            biography: "Passionate about student welfare and effective communication strategies.",
+            category: "other_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/naana-divine"
+            }
+        },
+        {
+            name: "Jamal Mashood",
+            position: "Deputy Organizer",
+            positionDescription: "Coordinating student events and activities",
+            biography: "Focused on creating memorable student experiences through well-organized events.",
+            category: "other_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/jamal-mashood"
+            }
+        },
+        {
+            name: "Osei Ampratwum Alberta",
+            position: "General Secretary",
+            positionDescription: "Managing administrative affairs and documentation",
+            biography: "Ensuring smooth administrative operations and maintaining accurate records.",
+            category: "main_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/alberta-osei"
+            }
+        },
+        {
+            name: "Dzifa Aseye Abena Eduaful-Mills",
+            position: "Deputy Secretary",
+            positionDescription: "Supporting administrative functions and record-keeping",
+            biography: "Committed to maintaining efficient administrative processes.",
+            category: "other_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/dzifa-eduaful-mills"
+            }
+        },
+        {
+            name: "Saeed Zakari",
+            position: "Sports Coordinator",
+            positionDescription: "Overseeing sports activities and athletic programs",
+            biography: "Promoting sports excellence and healthy competition among students.",
+            category: "other_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/saeed-zakari"
+            }
+        },
+        {
+            name: "Ibe Daniel Albert",
+            position: "Hall President",
+            positionDescription: "Managing hall affairs and student welfare",
+            biography: "Dedicated to creating a conducive living environment for students.",
+            category: "main_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/daniel-albert"
+            }
+        },
+        {
+            name: "Basily Ansah Yeboah",
+            position: "Acting President",
+            positionDescription: "Leading the student body and executive council",
+            biography: "Committed to student welfare and institutional development.",
+            category: "main_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/basily-yeboah",
+                twitter: "https://twitter.com/basily_yeboah"
+            }
+        },
+        {
+            name: "Kelvin Ofori Atta",
+            position: "Hall President",
+            positionDescription: "Managing hall operations and student welfare",
+            biography: "Focused on creating a supportive and engaging hall environment.",
+            category: "main_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/kelvin-atta"
+            }
+        },
+        {
+            name: "Quartey Joshua Papafio",
+            position: "Sports Coordinator",
+            positionDescription: "Coordinating sports activities and athletic events",
+            biography: "Passionate about sports development and student athletic achievement.",
+            category: "other_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/joshua-papafio"
+            }
+        },
+        {
+            name: "Rockson Appiah Mensah",
+            position: "Organizer",
+            positionDescription: "Planning and executing student events",
+            biography: "Expert in event planning and student engagement activities.",
+            category: "main_executive",
+            socialLinks: {
+                linkedin: "https://linkedin.com/in/rockson-mensah"
+            }
+        }
+    ];
+
+    console.log('Creating executive users...');
+    for (const executive of executives) {
+        const username = executive.name.toLowerCase().replace(/\s+/g, '.');
+        const email = `${username}@example.com`;
+        const hashedPassword = await bcrypt.hash('exec123', 10);
+
+        await prisma.user.upsert({
+            where: { email },
+            update: {
+                ...executive,
+                username,
+                password: hashedPassword,
+                roleId: executiveRole.id,
+            },
+            create: {
+                ...executive,
+                username,
+                email,
+                password: hashedPassword,
+                roleId: executiveRole.id,
+            },
+        });
+        console.log(`Created user: ${executive.name} (${username}) with password 'exec123'`);
     }
 
     // Create admin user

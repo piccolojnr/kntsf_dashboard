@@ -1,15 +1,131 @@
 'use server'
 import prisma from '../prisma/client'
-import { hash } from 'bcryptjs'
+import { hash, compare } from 'bcryptjs'
 import { log } from '../logger'
 import { AuthorizedUser, ServiceResponse } from '../types/common'
 import { handleError } from '../utils'
+import { User } from '@prisma/client'
+import { getSession } from '../auth/auth'
 
 export interface UserData {
   username: string
   email: string
   password: string
   roleId: number
+}
+
+export interface UpdatePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export async function getUser(): Promise<ServiceResponse<User>> {
+  try {
+    const session = await getSession();
+
+    if (!session || !session.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { id } = session.user as any;
+
+    if (!id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
+
+    })
+    if (!user) {
+      return { success: false, error: 'User not found' }
+    }
+    return { success: true, data: user }
+  }
+  catch (error) {
+    log.error('Failed to get user:', error)
+    return handleError(error)
+
+  }
+}
+
+
+export async function updateUser(userData: User): Promise<ServiceResponse<User>> {
+  try {
+    const session = await getSession();
+
+    if (!session || !session.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { id } = session.user as any;
+
+    if (!id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: {
+        ...userData,
+        socialLinks: userData.socialLinks ? JSON.stringify(userData.socialLinks) : undefined,
+      },
+    })
+
+    return { success: true, data: updatedUser }
+  }
+  catch (error) {
+    log.error('Failed to update user:', error)
+    return handleError(error)
+  }
+}
+
+import cloudinary from '@/lib/cloudinary';
+
+export async function uploadProfileImage(formData: FormData): Promise<ServiceResponse<User>> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { id } = session.user as any;
+
+    if (!id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const file = formData.get('image') as File;
+    if (!file) {
+      return { success: false, error: 'No file uploaded' };
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    const uploadResult = await new Promise<any>((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: 'profile_images',
+          public_id: `user_${id}`,
+          overwrite: true,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      ).end(buffer);
+    });
+
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: { image: uploadResult.secure_url },
+    });
+
+    return { success: true, data: updatedUser };
+  } catch (error) {
+    log.error('Failed to upload profile image:', error);
+    return handleError(error);
+  }
 }
 
 export async function create(userData: UserData): Promise<ServiceResponse<AuthorizedUser>> {
@@ -165,5 +281,50 @@ export async function getAll(): Promise<ServiceResponse<AuthorizedUser[]>> {
   } catch (error) {
     log.error('Failed to get all users:', error)
     return handleError(error)
+  }
+}
+
+export async function updatePassword(data: UpdatePasswordData): Promise<ServiceResponse<User>> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { id } = session.user as any;
+
+    if (!id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get current user to verify current password
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    // Verify current password
+    const isValidPassword = await compare(data.currentPassword, user.password);
+    if (!isValidPassword) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+
+    // Hash new password
+    const hashedPassword = await hash(data.newPassword, 10);
+
+    // Update password
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: { password: hashedPassword },
+    });
+
+    return { success: true, data: updatedUser };
+  } catch (error) {
+    log.error('Failed to update password:', error);
+    return handleError(error);
   }
 }

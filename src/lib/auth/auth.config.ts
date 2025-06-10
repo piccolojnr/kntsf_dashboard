@@ -55,6 +55,7 @@ export const authConfig: NextAuthOptions = {
                     return {
                         id: user.id.toString(),
                         username: user.username,
+                        image: user.image || null,
                         email: user.email,
                         role: user.role
                     };
@@ -82,6 +83,7 @@ export const authConfig: NextAuthOptions = {
             if (user) {
                 token.id = user.id;
                 token.username = (user as any).username;
+                token.image = (user as any).image || null;
                 token.email = (user as any).email;
                 token.role = (user as any).role;
             }
@@ -91,6 +93,7 @@ export const authConfig: NextAuthOptions = {
             if (session.user) {
                 (session.user as any).id = token.id as string;
                 (session.user as any).username = token.username as string;
+                (session.user as any).image = token.image || null;
                 (session.user as any).email = token.email as string;
                 (session.user as any).role = token.role as string;
             }

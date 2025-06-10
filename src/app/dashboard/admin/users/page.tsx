@@ -8,5 +8,5 @@ export default async function UsersPage() {
     user,
   });
 
-  return <UsersClient permissions={permissions} />;
+  return <UsersClient permissions={permissions} user={user} />;
 }

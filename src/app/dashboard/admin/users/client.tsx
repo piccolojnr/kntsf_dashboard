@@ -36,15 +36,16 @@ import {
 import { toast } from "sonner";
 import { AccessPermissions } from "@/lib/permissions";
 import { User } from "@prisma/client";
-import { RoleWithPermissions } from "@/lib/types/common";
+import { RoleWithPermissions, SessionUser } from "@/lib/types/common";
 import services from "@/lib/services";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface UsersClientProps {
   permissions: AccessPermissions;
+  user: SessionUser;
 }
 
-export function UsersClient({ permissions }: UsersClientProps) {
+export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
@@ -391,7 +392,7 @@ export function UsersClient({ permissions }: UsersClientProps) {
                           >
                             Edit
                           </Button>
-                          {user.id !== 1 && ( // Prevent deletion of the admin user
+                          {user.id !== authUser.id && ( // Prevent deletion of the admin user
                             <Button
                               variant="destructive"
                               size="sm"

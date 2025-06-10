@@ -392,16 +392,18 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                           >
                             Edit
                           </Button>
-                          {user.id !== authUser.id && ( // Prevent deletion of the admin user
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(user.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
+                          {user.id !== authUser.id &&
+                            user.roleId !== 1 && ( // Assuming roleId 1 is the admin role
+                              // Prevent deletion of the admin user
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDelete(user.id)}
+                                disabled={deleteMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                         </div>
                       )}
                     </TableCell>

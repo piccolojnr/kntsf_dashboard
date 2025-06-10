@@ -50,6 +50,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     username: "",
+    name: "",
     email: "",
     password: "",
     roleId: "",
@@ -172,6 +173,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
     setSelectedUser(user);
     setFormData({
       username: user.username,
+      name: user.name || "", // Optional field
       email: user.email,
       password: "", // Don't show password in edit mode
       roleId: user.roleId.toString(),
@@ -183,6 +185,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
     setSelectedUser(null);
     setFormData({
       username: "",
+      name: "",
       email: "",
       password: "",
       roleId: "",
@@ -279,6 +282,18 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                     required
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input

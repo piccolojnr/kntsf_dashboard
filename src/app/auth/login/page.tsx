@@ -25,7 +25,11 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isLoading) return; // Prevent multiple submissions
+    
     setIsLoading(true);
+    toast.loading("Logging in...");
 
     try {
       const result = await signIn("credentials", {
@@ -33,20 +37,26 @@ export default function Login() {
         password: password,
         redirect: false,
       });
+
       if (result?.error) {
+        toast.dismiss();
         toast.error("Invalid username or password");
         return;
       }
 
       if (result?.ok) {
+        toast.dismiss();
+        toast.success("Login successful!");
+        // Add a small delay to ensure the success message is shown
+        await new Promise(resolve => setTimeout(resolve, 500));
         router.push("/dashboard");
       }
     } catch (error) {
       console.error("Login error:", error);
+      toast.dismiss();
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
       setIsLoading(false);
-    }
+    } 
   };
 
   return (
@@ -69,6 +79,7 @@ export default function Login() {
                 placeholder="Enter your username"
                 required
                 disabled={isLoading}
+                autoComplete="username"
               />
             </div>
             <div className="space-y-2">
@@ -82,6 +93,7 @@ export default function Login() {
                   placeholder="Enter your password"
                   required
                   disabled={isLoading}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -97,7 +109,12 @@ export default function Login() {
                 </button>
               </div>
             </div>
-            <Button className="w-full" type="submit" disabled={isLoading}>
+            <Button 
+              className="w-full" 
+              type="submit" 
+              disabled={isLoading}
+              aria-busy={isLoading}
+            >
               {isLoading ? "Logging in..." : "Login"}
             </Button>
             <div className="text-sm text-center">

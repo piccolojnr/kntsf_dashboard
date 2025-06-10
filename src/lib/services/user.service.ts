@@ -6,6 +6,7 @@ import { AuthorizedUser, ServiceResponse } from '../types/common'
 import { handleError } from '../utils'
 import { User } from '@prisma/client'
 import { getSession } from '../auth/auth'
+import cloudinary from '@/lib/cloudinary';
 
 export interface UserData {
   username: string
@@ -78,8 +79,6 @@ export async function updateUser(userData: User): Promise<ServiceResponse<User>>
     return handleError(error)
   }
 }
-
-import cloudinary from '@/lib/cloudinary';
 
 export async function uploadProfileImage(formData: FormData): Promise<ServiceResponse<User>> {
   try {

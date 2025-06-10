@@ -5,7 +5,7 @@ import { StudentsClient } from "./client";
 export default async function StudentsPage() {
   const user = await getCurrentUser();
   const permissions = await getPermissions({
-    user,
+  user,
   });
 
   return <StudentsClient user={user} permissions={permissions} />;

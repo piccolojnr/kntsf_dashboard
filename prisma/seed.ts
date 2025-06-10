@@ -18,6 +18,23 @@ async function main() {
         { name: 'manage_students', description: 'Can manage students' },
         { name: 'view_students', description: 'Can view students' },
         { name: 'export_data', description: 'Can export data' },
+        // 
+        {
+            name: "news:create",
+            description: "Create news articles",
+        },
+        {
+            name: "news:read",
+            description: "Read news articles",
+        },
+        {
+            name: "news:update",
+            description: "Update news articles",
+        },
+        {
+            name: "news:delete",
+            description: "Delete news articles",
+        },
     ];
 
     console.log('Creating permissions...');
@@ -25,9 +42,11 @@ async function main() {
         await prisma.permission.upsert({
             where: {
                 name: permission.name,
+            },
+            update: {
+                name: permission.name,
                 description: permission.description,
             },
-            update: {},
             create: permission,
         });
     }
@@ -50,6 +69,25 @@ async function main() {
                 'manage_students',
                 'view_students',
                 'export_data',
+                'news:create',
+                'news:read',
+                'news:update',
+                'news:delete',
+            ],
+        },
+        {
+            name: 'pro',
+            description: "Public Relations Officer",
+            permissions: [
+                'create_permits',
+                'view_permits',
+                'view_students',
+                'manage_settings',
+                'view_reports',
+                'news:create',
+                'news:read',
+                'news:update',
+                'news:delete',
             ],
         },
         {
@@ -278,6 +316,92 @@ async function main() {
             roleId: adminRole.id,
         },
     });
+
+    const proRole = await prisma.role.findUnique({
+        where: { name: 'pro' },
+    });
+
+    if (!proRole) {
+        throw new Error('Pro role not found');
+    }
+
+
+    console.log("creating pro")
+    await prisma.user.upsert({
+        where: { username: 'pro' },
+        update: {
+            email: 'pro@example.com',
+            username: 'pro',
+            password: hashedPassword,
+            roleId: proRole.id,
+        },
+        create: {
+            username: 'pro',
+            email: 'pro@example.com',
+            password: hashedPassword,
+            roleId: proRole.id,
+        },
+    });
+
+    // Add news article permissions
+    // const newsPermissions = [
+    //     {
+    //         name: "news:create",
+    //         description: "Create news articles",
+    //     },
+    //     {
+    //         name: "news:read",
+    //         description: "Read news articles",
+    //     },
+    //     {
+    //         name: "news:update",
+    //         description: "Update news articles",
+    //     },
+    //     {
+    //         name: "news:delete",
+    //         description: "Delete news articles",
+    //     },
+    // ];
+
+    // // Create PR role
+    // const prRole = {
+    //     name: "PR",
+    //     description: "Public Relations Officer",
+    // };
+
+    // // Add news permissions to database
+    // for (const permission of newsPermissions) {
+    //     await prisma.permission.create({
+    //         data: permission,
+    //     });
+    // }
+
+    // // Create PR role with permissions
+    // const prRoleData = await prisma.role.create({
+    //     data: {
+    //         ...prRole,
+    //         permissions: {
+    //             create: [
+    //                 // Staff permissions
+    //                 ...staffPermissions.map((permission) => ({
+    //                     permission: {
+    //                         connect: {
+    //                             name: permission.name,
+    //                         },
+    //                     },
+    //                 })),
+    //                 // News permissions
+    //                 ...newsPermissions.map((permission) => ({
+    //                     permission: {
+    //                         connect: {
+    //                             name: permission.name,
+    //                         },
+    //                     },
+    //                 })),
+    //             ],
+    //         },
+    //     },
+    // });
 
     console.log('Seed completed successfully!');
 }

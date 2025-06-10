@@ -58,10 +58,16 @@ export function AppSidebar({
         isActive: true,
       },
       {
+        title: "News",
+        url: "/dashboard/news",
+        icon: User,
+        show: () => true, // Always show for logged-in users
+      },
+      {
         title: "Profile",
         url: "/dashboard/profile",
         icon: User,
-        show: () => true, // Always show for logged-in users
+        show: () => permissions.canViewNews, // Always show for logged-in users
       },
       {
         title: "Permits",

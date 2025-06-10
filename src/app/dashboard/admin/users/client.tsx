@@ -39,6 +39,8 @@ import { User } from "@prisma/client";
 import { RoleWithPermissions, SessionUser } from "@/lib/types/common";
 import services from "@/lib/services";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getInitials } from "@/lib/utils";
 
 interface UsersClientProps {
   permissions: AccessPermissions;
@@ -363,6 +365,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead></TableHead>
                 <TableHead>#ID</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
@@ -381,6 +384,17 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
               ) : (
                 usersData?.map((user) => (
                   <TableRow key={user.id} className="hover:bg-muted/50">
+                    <TableCell className="w-4">
+                      <Avatar className="w-8 h-8 rounded-lg">
+                        <AvatarImage
+                          src={user.image || ""}
+                          alt={user?.username}
+                        />
+                        <AvatarFallback className="rounded-lg">
+                          {getInitials(user?.username || "User")}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TableCell>
                     <TableCell className="px-2 font-medium">
                       {user.id}
                     </TableCell>

@@ -23,7 +23,6 @@ import {
   User,
   Mail,
   Camera,
-  X,
   Upload,
   Eye,
   EyeClosed,
@@ -153,29 +152,6 @@ export default function ProfilePage() {
     } catch (err: any) {
       setError(err.message);
       toast.error("Failed to upload image");
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
-  const handleImageRemove = async () => {
-    setIsUploadingImage(true);
-    try {
-      const response = await fetch("/api/users/profile/image", {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to remove image");
-      }
-
-      setProfile((prev) => (prev ? { ...prev, image: null } : null));
-      toast.success("Profile image removed successfully");
-    } catch (err: any) {
-      setError(err.message);
-      toast.error("Failed to remove image");
     } finally {
       setIsUploadingImage(false);
     }
@@ -391,24 +367,6 @@ export default function ProfilePage() {
                     )}
                   </div>
                 </div>
-
-                {profile.image && !imagePreview && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleImageRemove}
-                    disabled={isUploadingImage}
-                  >
-                    {isUploadingImage ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <X className="w-4 h-4 mr-2" />
-                        Remove
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
 
               <div className="flex-1 space-y-4">

@@ -11,7 +11,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Eye, EyeClosed } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -25,9 +24,9 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isLoading) return; // Prevent multiple submissions
-    
+
     setIsLoading(true);
     toast.loading("Logging in...");
 
@@ -41,6 +40,7 @@ export default function Login() {
       if (result?.error) {
         toast.dismiss();
         toast.error("Invalid username or password");
+        setIsLoading(false);
         return;
       }
 
@@ -48,15 +48,18 @@ export default function Login() {
         toast.dismiss();
         toast.success("Login successful!");
         // Add a small delay to ensure the success message is shown
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         router.push("/dashboard");
+      } else {
+        toast.dismiss();
+        toast.error("Login failed. Please try again.");
       }
     } catch (error) {
       console.error("Login error:", error);
       toast.dismiss();
       toast.error("An unexpected error occurred. Please try again.");
       setIsLoading(false);
-    } 
+    }
   };
 
   return (
@@ -109,21 +112,16 @@ export default function Login() {
                 </button>
               </div>
             </div>
-            <Button 
-              className="w-full" 
-              type="submit" 
+            <Button
+              className="w-full"
+              type="submit"
               disabled={isLoading}
               aria-busy={isLoading}
             >
               {isLoading ? "Logging in..." : "Login"}
             </Button>
             <div className="text-sm text-center">
-              <Link
-                href="/forgot-password"
-                className="text-primary hover:underline"
-              >
-                Forgot password?
-              </Link>
+              Forgot password please contact administrator
             </div>
           </form>
         </CardContent>

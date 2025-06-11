@@ -24,7 +24,7 @@ model User {
   permits             Permit[] // Permits issued by this user
   auditLogs           AuditLog[]
   recoveryTokens      RecoveryToken[]
-  newsArticles        NewsArticle[]   // News articles written by this user
+  newsArticles        NewsArticle[] // News articles written by this user
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 }
@@ -130,20 +130,20 @@ enum PaymentStatus {
 }
 
 model NewsArticle {
-  id              Int       @id @default(autoincrement())
-  title           String
-  slug            String    @unique
-  content         String    @db.Text
-  excerpt         String    @db.Text
-  image           String    // Cloudinary URL
-  category        String
-  categoryColor   String    // Tailwind classes
-  featured        Boolean   @default(false)
-  published       Boolean   @default(false)
-  publishedAt     DateTime?
-  author          User      @relation(fields: [authorId], references: [id])
-  authorId        Int
-  readTime        String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            Int       @id @default(autoincrement())
+  title         String
+  slug          String    @unique
+  content       String    @db.Text
+  excerpt       String    @db.Text
+  image         String // Cloudinary URL
+  category      String // News category (e.g., "Announcements", "Updates", "Education", "Academic")
+  categoryColor String // Tailwind classes
+  featured      Boolean   @default(false)
+  published     Boolean   @default(false)
+  publishedAt   DateTime?
+  author        User      @relation(fields: [authorId], references: [id])
+  authorId      Int
+  readTime      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

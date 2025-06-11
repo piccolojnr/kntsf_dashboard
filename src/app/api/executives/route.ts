@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma/client";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
         const category = searchParams.get("category");
 
-        const where = {
+        const where: Prisma.UserWhereInput
+            = {
             ...(category && { category }),
-            role: {
-                name: "executive", // Assuming you have an executive role
-            },
+            NOT: {
+                username: {
+                    equals: "admin", // Exclude admin user
+                }
+            }
         };
 
         const executives = await prisma.user.findMany({

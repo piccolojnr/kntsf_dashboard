@@ -1,30 +1,23 @@
-import { Metadata } from "next";
-import { NewsClient } from "./client";
-import { getAdminArticles } from "@/lib/services/news.service";
+import { NewsClient } from "@/components/app/article/news-client";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "News Articles | Dashboard",
-  description: "Manage news articles",
+  description: "Manage news articles and publications",
 };
 
-export default async function NewsPage() {
-  const result = await getAdminArticles(1, 10);
-  const stats = {
-    total: result.success ? result.data?.total ?? 0 : 0,
-    published: result.success
-      ? result.data?.articles.filter((article) => article.published).length ?? 0
-      : 0,
-    drafts: result.success
-      ? result.data?.articles.filter((article) => !article.published).length ?? 0
-      : 0,
-    featured: result.success
-      ? result.data?.articles.filter((article) => article.featured).length ?? 0
-      : 0,
-  };
-
+export default function NewsPage() {
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
-      <NewsClient initialStats={stats} />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">News Articles</h2>
+          <p className="text-muted-foreground">
+            Create and manage your news articles and publications
+          </p>
+        </div>
+      </div>
+      <NewsClient />
     </div>
   );
 }

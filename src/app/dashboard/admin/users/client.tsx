@@ -1,7 +1,9 @@
 "use client";
 
+import type React from "react";
+
 import { format } from "date-fns";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -34,13 +36,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { AccessPermissions } from "@/lib/permissions";
-import { User } from "@prisma/client";
-import { RoleWithPermissions, SessionUser } from "@/lib/types/common";
+import type { AccessPermissions } from "@/lib/permissions";
+import type { User } from "@prisma/client";
+import type { RoleWithPermissions, SessionUser } from "@/lib/types/common";
 import services from "@/lib/services";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 interface UsersClientProps {
   permissions: AccessPermissions;
@@ -139,6 +142,84 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
     },
   });
 
+  const togglePublishedMutation = useMutation({
+    mutationFn: ({
+      userId,
+      published,
+    }: {
+      userId: number;
+      published: boolean;
+    }) => services.user.togglePublished({ userId, published }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("User visibility updated successfully");
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update user visibility"
+      );
+    },
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ userId, newIndex }: { userId: number; newIndex: number }) =>
+      services.user.updateUserOrder({ userId, newIndex }),
+    // Remove the onSuccess callback since we're updating optimistically
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update user order"
+      );
+    },
+  });
+
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    // Optimistically update the UI immediately
+    queryClient.setQueryData(["users"], (oldData: User[] | undefined) => {
+      if (!oldData) return oldData;
+
+      const items = Array.from(oldData);
+      const [reorderedItem] = items.splice(sourceIndex, 1);
+      items.splice(destinationIndex, 0, reorderedItem);
+
+      return items;
+    });
+
+    // Update the order in the database in the background
+    const reorderedItem = usersData?.[sourceIndex];
+    if (reorderedItem) {
+      updateOrderMutation.mutate(
+        {
+          userId: reorderedItem.id,
+          newIndex: destinationIndex,
+        },
+        {
+          onError: () => {
+            // Revert the optimistic update on error
+            queryClient.invalidateQueries({ queryKey: ["users"] });
+            toast.error(
+              "Failed to update user order. Changes have been reverted."
+            );
+          },
+        }
+      );
+    }
+  };
+
+  const handleTogglePublished = (userId: number, currentPublished: boolean) => {
+    if (!permissions.canManageUsers) {
+      toast.error("You don't have permission to manage users");
+      return;
+    }
+    togglePublishedMutation.mutate({ userId, published: !currentPublished });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!permissions.canManageUsers) {
@@ -148,7 +229,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
 
     const userData = {
       ...formData,
-      roleId: parseInt(formData.roleId),
+      roleId: Number.parseInt(formData.roleId),
     };
 
     if (selectedUser) {
@@ -224,6 +305,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                     <TableCell>
                       <Skeleton className="w-24 h-4" />
                     </TableCell>
+
                     <TableCell>
                       <Skeleton className="w-32 h-4" />
                     </TableCell>
@@ -362,85 +444,138 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>#ID</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {usersData?.length === 0 ? (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    No users found
-                  </TableCell>
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead></TableHead>
+                  <TableHead>#ID</TableHead>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                usersData?.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-muted/50">
-                    <TableCell className="w-4">
-                      <Avatar className="w-8 h-8 rounded-lg">
-                        <AvatarImage
-                          src={user.image || ""}
-                          alt={user?.username}
-                        />
-                        <AvatarFallback className="rounded-lg">
-                          {getInitials(user?.username || "User")}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TableCell>
-                    <TableCell className="px-2 font-medium">
-                      {user.id}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {user.username}
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {rolesData?.find((r) => r.id === user.roleId)?.name ||
-                          "Unknown Role"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(user.createdAt), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      {permissions.canManageUsers && (
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditDialog(user)}
-                          >
-                            Edit
-                          </Button>
-                          {user.id !== authUser.id &&
-                            user.roleId !== 1 && ( // Assuming roleId 1 is the admin role
-                              // Prevent deletion of the admin user
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleDelete(user.id)}
-                                disabled={deleteMutation.isPending}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <Droppable droppableId="users" direction="vertical">
+                {(provided) => (
+                  <TableBody
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                  >
+                    {usersData?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center">
+                          No users found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      usersData?.map((user, index) => (
+                        <Draggable
+                          key={user.id}
+                          draggableId={user.id.toString()}
+                          index={index}
+                        >
+                          {(provided) => (
+                            <TableRow
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className="hover:bg-muted/50"
+                            >
+                              <TableCell className="w-10">
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="cursor-grab"
+                                >
+                                  <GripVertical className="w-4 h-4 text-gray-400" />
+                                </div>
+                              </TableCell>
+                              <TableCell className="w-4">
+                                <Avatar className="w-8 h-8 rounded-lg">
+                                  <AvatarImage
+                                    src={user.image || ""}
+                                    alt={user?.username}
+                                  />
+                                  <AvatarFallback className="rounded-lg">
+                                    {getInitials(user?.username || "User")}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </TableCell>
+                              <TableCell className="px-2 font-medium">
+                                {user.id}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {user.username}
+                              </TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">
+                                  {rolesData?.find((r) => r.id === user.roleId)
+                                    ?.name || "Unknown Role"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleTogglePublished(
+                                      user.id,
+                                      user.published
+                                    )
+                                  }
+                                  className="h-8 w-8 p-0"
+                                >
+                                  {user.published ? (
+                                    <Eye className="w-4 h-4 text-green-500" />
+                                  ) : (
+                                    <EyeOff className="w-4 h-4 text-gray-400" />
+                                  )}
+                                </Button>
+                              </TableCell>
+                              <TableCell>
+                                {format(
+                                  new Date(user.createdAt),
+                                  "MMM d, yyyy"
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {permissions.canManageUsers && (
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => openEditDialog(user)}
+                                    >
+                                      Edit
+                                    </Button>
+                                    {user.id !== authUser.id &&
+                                      user.roleId !== 1 && (
+                                        <Button
+                                          variant="destructive"
+                                          size="sm"
+                                          onClick={() => handleDelete(user.id)}
+                                          disabled={deleteMutation.isPending}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Draggable>
+                      ))
+                    )}
+                    {provided.placeholder}
+                  </TableBody>
+                )}
+              </Droppable>
+            </Table>
+          </DragDropContext>
         </CardContent>
       </Card>
     </div>

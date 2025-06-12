@@ -21,12 +21,15 @@ model User {
   biography           String?         @db.Text // User profile
   socialLinks         Json? // Social media links stored as JSON
   category            String? // Classification (main_executive, other_executive, all_present)
+  index               Int             @default(0) // For custom ordering
+  published           Boolean         @default(true) // To control visibility
   permits             Permit[] // Permits issued by this user
   auditLogs           AuditLog[]
   recoveryTokens      RecoveryToken[]
   newsArticles        NewsArticle[] // News articles written by this user
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
+  Event               Event[]
 }
 
 model Role {
@@ -146,4 +149,27 @@ model NewsArticle {
   readTime      String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Event {
+  id               Int       @id @default(autoincrement())
+  title            String
+  slug             String    @unique
+  description      String    @db.Text
+  excerpt          String    @db.Text
+  image            String // Cloudinary URL
+  date             DateTime
+  time             String // Store time as string (e.g., "14:00")
+  location         String
+  category         String // Event category (e.g., "Academic", "Social", "Sports", "Cultural")
+  categoryColor    String // Tailwind classes
+  featured         Boolean   @default(false)
+  published        Boolean   @default(false)
+  publishedAt      DateTime?
+  maxAttendees     Int       @default(0)
+  currentAttendees Int       @default(0)
+  organizer        User      @relation(fields: [organizerId], references: [id])
+  organizerId      Int
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `User` ADD COLUMN `index` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `published` BOOLEAN NOT NULL DEFAULT true;

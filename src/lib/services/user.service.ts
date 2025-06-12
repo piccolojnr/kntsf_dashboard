@@ -20,6 +20,16 @@ export interface UpdatePasswordData {
   newPassword: string;
 }
 
+export interface UpdateUserOrderData {
+  userId: number;
+  newIndex: number;
+}
+
+export interface TogglePublishedData {
+  userId: number;
+  published: boolean;
+}
+
 export async function getUser(): Promise<ServiceResponse<User>> {
   try {
     const session = await getSession();
@@ -204,7 +214,8 @@ export async function update(userId: number, userData: Partial<UserData>): Promi
             }
           }
         }
-      }
+      },
+
     })
     return { success: true, data: user }
   } catch (error) {
@@ -229,6 +240,7 @@ export async function deleteUser(userId: number): Promise<ServiceResponse<Author
         }
       }
     })
+
     return { success: true, data: user }
   } catch (error) {
     log.error('Failed to delete user:', error)
@@ -252,12 +264,101 @@ export async function search(query: string): Promise<ServiceResponse<AuthorizedU
             }
           }
         }
-      }
+      },
+      orderBy: [
+        { index: 'asc' },
+      ]
     })
     return { success: true, data: users }
   } catch (error) {
     log.error('Failed to search users:', error)
     return handleError(error)
+  }
+}
+
+
+export async function updateUserOrder(data: UpdateUserOrderData): Promise<ServiceResponse<User>> {
+  try {
+    const { userId, newIndex } = data
+
+    // Get the user to be moved
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+
+    if (!user) {
+      return { success: false, error: "User not found" }
+    }
+
+    const oldIndex = user.index || 0
+
+    // Use a transaction to ensure data consistency
+    await prisma.$transaction(async (tx) => {
+      if (newIndex > oldIndex) {
+        // Moving down: shift users between oldIndex and newIndex up by 1
+        await tx.user.updateMany({
+          where: {
+            index: {
+              gt: oldIndex,
+              lte: newIndex,
+            },
+            id: { not: userId },
+          },
+          data: {
+            index: {
+              decrement: 1,
+            },
+          },
+        })
+      } else if (newIndex < oldIndex) {
+        // Moving up: shift users between newIndex and oldIndex down by 1
+        await tx.user.updateMany({
+          where: {
+            index: {
+              gte: newIndex,
+              lt: oldIndex,
+            },
+            id: { not: userId },
+          },
+          data: {
+            index: {
+              increment: 1,
+            },
+          },
+        })
+      }
+
+      // Update the moved user's index
+      await tx.user.update({
+        where: { id: userId },
+        data: { index: newIndex },
+      })
+    })
+
+    // Return the updated user
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+
+    return { success: true, data: updatedUser! }
+  } catch (error) {
+    log.error("Failed to update user order:", error)
+    return handleError(error)
+  }
+}
+export async function togglePublished(data: TogglePublishedData): Promise<ServiceResponse<User>> {
+  try {
+    const { userId, published } = data;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { published },
+    });
+
+    return { success: true, data: user };
+  } catch (error) {
+    log.error('Failed to toggle user published status:', error);
+    return handleError(error);
   }
 }
 
@@ -274,7 +375,10 @@ export async function getAll(): Promise<ServiceResponse<AuthorizedUser[]>> {
             }
           }
         }
-      }
+      },
+      orderBy: [
+        { index: 'asc' },
+      ]
     })
     return { success: true, data: users }
   } catch (error) {

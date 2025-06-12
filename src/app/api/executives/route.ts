@@ -10,11 +10,7 @@ export async function GET(request: NextRequest) {
         const where: Prisma.UserWhereInput
             = {
             ...(category && { category }),
-            NOT: {
-                username: {
-                    equals: "admin", // Exclude admin user
-                }
-            }
+            published: true
         };
 
         const executives = await prisma.user.findMany({
@@ -31,7 +27,7 @@ export async function GET(request: NextRequest) {
                 email: true,
             },
             orderBy: {
-                category: "asc", // Order by category to group executives
+                index: "asc",
             },
         });
 

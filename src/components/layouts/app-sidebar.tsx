@@ -6,7 +6,8 @@ import {
   Users,
   Shield,
   Search,
-  User,
+  Newspaper,
+  Calendar,
 } from "lucide-react";
 import * as React from "react";
 import { NavMain } from "./nav-main";
@@ -60,8 +61,14 @@ export function AppSidebar({
       {
         title: "News",
         url: "/dashboard/news",
-        icon: User,
-        show: () => permissions.canViewNews, // Always show for logged-in users
+        icon: Newspaper,
+        show: () => permissions.canManageNews, // Always show for logged-in users
+      },
+      {
+        title: "Events",
+        url: "/dashboard/events",
+        icon: Calendar,
+        show: () => permissions.canManageEvents,
       },
       {
         title: "Permits",

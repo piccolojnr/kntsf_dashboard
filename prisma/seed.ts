@@ -18,23 +18,16 @@ async function main() {
         { name: 'manage_students', description: 'Can manage students' },
         { name: 'view_students', description: 'Can view students' },
         { name: 'export_data', description: 'Can export data' },
-        // 
-        {
-            name: "news:create",
-            description: "Create news articles",
-        },
-        {
-            name: "news:read",
-            description: "Read news articles",
-        },
-        {
-            name: "news:update",
-            description: "Update news articles",
-        },
-        {
-            name: "news:delete",
-            description: "Delete news articles",
-        },
+        // news permissions
+        { name: "news:create", description: "Create news articles" },
+        { name: "news:read", description: "Read news articles" },
+        { name: "news:update", description: "Update news articles" },
+        { name: "news:delete", description: "Delete news articles" },
+        // events permissions
+        { name: "events:create", description: "Create events" },
+        { name: "events:read", description: "Read events" },
+        { name: "events:update", description: "Update events" },
+        { name: "events:delete", description: "Delete events" },
     ];
 
     console.log('Creating permissions...');
@@ -69,10 +62,16 @@ async function main() {
                 'manage_students',
                 'view_students',
                 'export_data',
+                // news permissions
                 'news:create',
                 'news:read',
                 'news:update',
                 'news:delete',
+                // events permissions
+                'events:create',
+                'events:read',
+                'events:update',
+                'events:delete',
             ],
         },
         {
@@ -84,10 +83,16 @@ async function main() {
                 'view_students',
                 'manage_settings',
                 'view_reports',
+                // news permissions
                 'news:create',
                 'news:read',
                 'news:update',
                 'news:delete',
+                // events permissions
+                'events:create',
+                'events:read',
+                'events:update',
+                'events:delete',
             ],
         },
         {

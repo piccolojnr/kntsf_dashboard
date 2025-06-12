@@ -13,7 +13,8 @@ export interface AccessPermissions {
     canCreatePermits: boolean;
     canRevokePermits: boolean;
     canViewPermits: boolean;
-    canViewNews: boolean
+    canManageNews: boolean;
+    canManageEvents: boolean;
     canManageStudents: boolean;
     canViewStudents: boolean;
     canExportData: boolean;
@@ -40,7 +41,8 @@ export async function getPermissions({ user }: { user: SessionUser }): Promise<A
         canCreatePermits: hasPermission("create_permits"),
         canRevokePermits: hasPermission("revoke_permits"),
         canViewPermits: hasPermission("view_permits"),
-        canViewNews: hasPermission("news:read"),
+        canManageNews: hasPermission("news:read"),
+        canManageEvents: hasPermission("events:read"),
         canManageStudents: hasPermission("manage_students"),
         canViewStudents: hasPermission("view_students"),
         canExportData: hasPermission("export_data"),

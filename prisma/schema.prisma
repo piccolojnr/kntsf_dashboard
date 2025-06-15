@@ -30,6 +30,9 @@ model User {
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
   Event               Event[]
+  Newsletter          Newsletter[]
+  Document            Document[]
+  StudentIdea         StudentIdea[]
 }
 
 model Role {
@@ -61,17 +64,18 @@ model RolePermission {
 }
 
 model Student {
-  id        Int       @id @default(autoincrement())
-  studentId String    @unique
-  name      String
-  email     String
-  course    String
-  level     String
-  number    String
-  permits   Permit[] // Permits issued to this student
-  payments  Payment[] // Payments made by this student
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          Int           @id @default(autoincrement())
+  studentId   String        @unique
+  name        String
+  email       String
+  course      String
+  level       String
+  number      String
+  permits     Permit[] // Permits issued to this student
+  payments    Payment[] // Payments made by this student
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  StudentIdea StudentIdea[]
 }
 
 model Permit {
@@ -172,4 +176,129 @@ model Event {
   organizerId      Int
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+}
+
+model Config {
+  id             Int             @id @default(autoincrement())
+  appName        String          @default("KNUST SRC Permit System")
+  appDescription String?         @db.Text
+  appLogo        String? // URL to app logo
+  appFavicon     String? // URL to favicon
+  contactInfo    ContactInfo?
+  semesterConfig SemesterConfig?
+  permitConfig   PermitConfig?
+  socialLinks    Json? // Social media links
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model ContactInfo {
+  id        Int      @id @default(autoincrement())
+  email     String?
+  phone     String?
+  address   String?  @db.Text
+  website   String?
+  config    Config   @relation(fields: [configId], references: [id])
+  configId  Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SemesterConfig {
+  id              Int      @id @default(autoincrement())
+  currentSemester String // e.g., "2023/2024"
+  academicYear    String // e.g., "2023/2024"
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean  @default(true)
+  config          Config   @relation(fields: [configId], references: [id])
+  configId        Int      @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PermitConfig {
+  id             Int      @id @default(autoincrement())
+  expirationDate DateTime @default(now())
+  defaultAmount  Float    @default(0.0)
+  currency       String   @default("GHS")
+  config         Config   @relation(fields: [configId], references: [id])
+  configId       Int      @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model NewsletterSubscriber {
+  id        Int                @id @default(autoincrement())
+  email     String             @unique
+  name      String?
+  studentId Int
+  status    SubscriptionStatus @default(PENDING)
+  token     String             @unique // For email verification
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+model Newsletter {
+  id        Int              @id @default(autoincrement())
+  title     String
+  content   String           @db.Text
+  status    NewsletterStatus @default(DRAFT)
+  sentAt    DateTime?
+  sentBy    User             @relation(fields: [sentById], references: [id])
+  sentById  Int
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+enum NewsletterStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  FAILED
+}
+
+model Document {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String?  @db.Text
+  category     String // e.g., "Academic", "Student Life", "Administrative"
+  fileUrl      String // Cloudinary URL
+  fileType     String // e.g., "pdf", "doc", "docx"
+  fileSize     Int // Size in bytes
+  downloads    Int      @default(0)
+  isPublic     Boolean  @default(true)
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  uploadedById Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model StudentIdea {
+  id           Int        @id @default(autoincrement())
+  title        String
+  description  String     @db.Text
+  category     String // e.g., "Academic", "Student Life", "Administrative"
+  status       IdeaStatus @default(PENDING)
+  student      Student    @relation(fields: [studentId], references: [id])
+  studentId    Int
+  reviewedBy   User?      @relation(fields: [reviewedById], references: [id])
+  reviewedById Int?
+  reviewNotes  String?    @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum IdeaStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  IMPLEMENTED
 }

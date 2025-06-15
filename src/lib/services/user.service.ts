@@ -140,12 +140,15 @@ export async function uploadProfileImage(formData: FormData): Promise<ServiceRes
 export async function create(userData: UserData): Promise<ServiceResponse<AuthorizedUser>> {
   try {
     const hashedPassword = await hash(userData.password, 10)
+    // users count
+    const userCount = await prisma.user.count();
     const user = await prisma.user.create({
       data: {
         username: userData.username,
         email: userData.email,
         password: hashedPassword,
-        roleId: userData.roleId
+        roleId: userData.roleId,
+        index: userCount + 1
       },
       include: {
         role: {
@@ -277,75 +280,72 @@ export async function search(query: string): Promise<ServiceResponse<AuthorizedU
 }
 
 
-export async function updateUserOrder(data: UpdateUserOrderData): Promise<ServiceResponse<User>> {
-  try {
-    const { userId, newIndex } = data
+export async function updateUserOrder(
+  data: UpdateUserOrderData
+): Promise<ServiceResponse<User>> {
+  const { userId, newIndex } = data;
 
-    // Get the user to be moved
+  // 1. Validate inputs
+  if (!Number.isInteger(newIndex) || newIndex < 0) {
+    return { success: false, error: "Invalid newIndex; must be >= 0." };
+  }
+
+  try {
+    // 2. Fetch the user to move
     const user = await prisma.user.findUnique({
       where: { id: userId },
-    })
-
+      select: { index: true }
+    });
     if (!user) {
-      return { success: false, error: "User not found" }
+      return { success: false, error: "User not found." };
     }
 
-    const oldIndex = user.index || 0
+    const oldIndex = user.index;
 
-    // Use a transaction to ensure data consistency
-    await prisma.$transaction(async (tx) => {
+    // 3. If no change, short‑circuit
+    if (newIndex === oldIndex) {
+      const unchanged = await prisma.user.findUnique({ where: { id: userId } });
+      return { success: true, data: unchanged! };
+    }
+
+    // 4. Transactionally shift and update
+    const updated = await prisma.$transaction(async (tx) => {
       if (newIndex > oldIndex) {
-        // Moving down: shift users between oldIndex and newIndex up by 1
+        // moving down: decrement indices in (oldIndex, newIndex]
         await tx.user.updateMany({
           where: {
-            index: {
-              gt: oldIndex,
-              lte: newIndex,
-            },
+            index: { gt: oldIndex, lte: newIndex },
             id: { not: userId },
           },
-          data: {
-            index: {
-              decrement: 1,
-            },
-          },
-        })
-      } else if (newIndex < oldIndex) {
-        // Moving up: shift users between newIndex and oldIndex down by 1
+          data: { index: { decrement: 1 } },
+        });
+      } else {
+        // moving up: increment indices in [newIndex, oldIndex)
         await tx.user.updateMany({
           where: {
-            index: {
-              gte: newIndex,
-              lt: oldIndex,
-            },
+            index: { gte: newIndex, lt: oldIndex },
             id: { not: userId },
           },
-          data: {
-            index: {
-              increment: 1,
-            },
-          },
-        })
+          data: { index: { increment: 1 } },
+        });
       }
 
-      // Update the moved user's index
-      await tx.user.update({
+      // update the moved user's index
+      return tx.user.update({
         where: { id: userId },
         data: { index: newIndex },
-      })
-    })
+      });
+    });
 
-    // Return the updated user
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: userId },
-    })
+    return { success: true, data: updated };
 
-    return { success: true, data: updatedUser! }
   } catch (error) {
-    log.error("Failed to update user order:", error)
-    return handleError(error)
+    log.error("Failed to update user order:", error);
+    return handleError(error);
   }
 }
+
+
 export async function togglePublished(data: TogglePublishedData): Promise<ServiceResponse<User>> {
   try {
     const { userId, published } = data;

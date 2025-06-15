@@ -8,6 +8,9 @@ import {
   Search,
   Newspaper,
   Calendar,
+  Mail,
+  Package,
+  Brain,
 } from "lucide-react";
 import * as React from "react";
 import { NavMain } from "./nav-main";
@@ -71,6 +74,24 @@ export function AppSidebar({
         show: () => permissions.canManageEvents,
       },
       {
+        title: "Newsletters",
+        url: "/dashboard/newsletters",
+        icon: Mail,
+        show: () => permissions.canManageEvents,
+      },
+      {
+        title: "Ideas",
+        url: "/dashboard/ideas",
+        icon: Brain,
+        show: () => permissions.canManageEvents,
+      },
+      {
+        title: "Documents",
+        url: "/dashboard/documents",
+        icon: Package,
+        show: () => permissions.canManageEvents,
+      },
+      {
         title: "Permits",
         url: "/dashboard/permits",
         icon: FileCheck,
@@ -105,6 +126,11 @@ export function AppSidebar({
             title: "Permissions",
             url: "/dashboard/admin/permissions",
             show: () => permissions.canManagePermissions,
+          },
+          {
+            title: "Settings",
+            url: "/dashboard/admin/settings",
+            show: () => permissions.canManageSettings,
           },
         ],
       },

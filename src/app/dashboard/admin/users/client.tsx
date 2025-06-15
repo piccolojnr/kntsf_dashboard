@@ -2,7 +2,6 @@
 
 import type React from "react";
 
-import { format } from "date-fns";
 import { Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -292,7 +291,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                   <TableHead>Username</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Created At</TableHead>
+                  <TableHead>Index</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -455,7 +454,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created At</TableHead>
+                  <TableHead>Index</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -536,10 +535,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                                 </Button>
                               </TableCell>
                               <TableCell>
-                                {format(
-                                  new Date(user.createdAt),
-                                  "MMM d, yyyy"
-                                )}
+                                {user.index !== null ? user.index : "Unknown"}
                               </TableCell>
                               <TableCell>
                                 {permissions.canManageUsers && (

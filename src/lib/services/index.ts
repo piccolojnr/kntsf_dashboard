@@ -9,7 +9,10 @@ import * as  SettingsService from "./settings.service";
 import * as  StudentService from "./student.service";
 import * as  UserService from "./user.service";
 import * as  ReportService from "./report.service";
-
+import * as  ConfigService from "./config.service";
+import * as  NewsletterService from "./newsletter.service";
+import * as  DocumentService from "./document.service";
+import * as  IdeaService from "./idea.service";
 
 const services = {
     audit: AuditService,
@@ -22,8 +25,11 @@ const services = {
     student: StudentService,
     user: UserService,
     email: EmailService,
-    report: ReportService
-
+    report: ReportService,
+    config: ConfigService,
+    newsletter: NewsletterService,
+    document: DocumentService,
+    idea: IdeaService,
 }
 
 export default services;

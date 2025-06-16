@@ -73,7 +73,16 @@ export async function uploadDocument(data: DocumentData): Promise<ServiceRespons
         }
 
         const extension = getFileExtension(data.file.name)
-        const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx']
+        const allowedExtensions = [
+            "pdf",
+            "doc",
+            "docx",
+            "txt",
+            "jpg",
+            "jpeg",
+            "png",
+            "gif"
+        ]
         if (!allowedExtensions.includes(extension)) {
             return {
                 success: false,
@@ -149,11 +158,7 @@ export async function getDocuments(category?: string,
         const skip = (page - 1) * limit
 
         // Get total count for pagination
-        const total = await prisma.studentIdea.count({
-            where: {
-                ...(status && status !== 'all' ? { status: status as any } : {})
-            }
-        })
+        const total = await prisma.studentIdea.count()
         const documents = await prisma.document.findMany({
             where: {
                 isPublic: true,

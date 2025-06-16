@@ -16,7 +16,7 @@ export async function POST(_: Request,
             )
         }
 
-        return NextResponse.json(response.data)
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error confirming newsletter subscription:', error)
         return NextResponse.json(

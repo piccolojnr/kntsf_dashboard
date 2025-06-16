@@ -8,14 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   Loader2,
   Save,
@@ -445,45 +438,6 @@ export default function ProfilePage() {
                 ) : (
                   <div className="p-2 bg-muted rounded-md">
                     {profile.position || "Not specified"}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
-                {isEditing ? (
-                  <Select
-                    value={editedProfile?.category || ""}
-                    onValueChange={(value) =>
-                      setEditedProfile((prev) =>
-                        prev ? { ...prev, category: value } : null
-                      )
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="main_executive">
-                        Main Executive
-                      </SelectItem>
-                      <SelectItem value="other_executive">
-                        Other Executive
-                      </SelectItem>
-                      <SelectItem value="all_present">All Present</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="p-2 bg-muted rounded-md">
-                    {profile.category ? (
-                      <Badge variant="outline">
-                        {profile.category
-                          .replace("_", " ")
-                          .replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </Badge>
-                    ) : (
-                      "Not specified"
-                    )}
                   </div>
                 )}
               </div>

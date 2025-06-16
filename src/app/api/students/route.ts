@@ -1,19 +1,39 @@
 import { NextResponse } from 'next/server'
 import services from '@/lib/services'
+import { z } from 'zod'
+
+
+
+const studentSchema = z.object({
+    studentId: z.string().min(1, 'Student ID is required'),
+    name: z.string().min(1, 'Name is required'),
+    email: z.string().email('Invalid email format'),
+    course: z.string().min(1, 'Course is required'),
+    level: z.string().min(1, 'Level is required'),
+    number: z.string().min(1, 'Number is required')
+})
 
 export async function POST(request: Request) {
     try {
         const data = await request.json()
-        const response = await services.student.create(data)
+        const validation = studentSchema.safeParse(data)
 
-        if (!response.success) {
+        if (!validation.success) {
             return NextResponse.json(
-                { error: response.error },
+                { error: validation.error },
                 { status: 400 }
             )
         }
 
-        return NextResponse.json(response.data)
+        const response = await services.student.create(data)
+        if (!response) {
+            return NextResponse.json(
+                response,
+                { status: 500 }
+            )
+        }
+
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error creating student:', error)
         return NextResponse.json(
@@ -43,7 +63,7 @@ export async function GET(request: Request) {
             )
         }
 
-        return NextResponse.json(response.data)
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error fetching students:', error)
         return NextResponse.json(

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma/client'
 
 export async function GET(
-    request: Request,
+    _: Request,
     { params }: { params: Promise<{ studentId: string }> }
 ) {
     try {
@@ -16,17 +16,6 @@ export async function GET(
         const student = await prisma.student.findUnique({
             where: {
                 studentId: studentId,
-            },
-            select: {
-                id: true,
-                studentId: true,
-                name: true,
-                email: true,
-                course: true,
-                level: true,
-                number: true,
-                createdAt: true,
-                updatedAt: true,
             },
         })
 

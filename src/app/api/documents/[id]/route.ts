@@ -18,7 +18,7 @@ export async function GET(
         }
 
         // Return the document data
-        return NextResponse.json(response.data, { status: 200 })
+        return NextResponse.json(response, { status: 200 })
     } catch (error) {
         console.error('Error getting document:', error)
         return NextResponse.json(

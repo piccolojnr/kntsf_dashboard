@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,20 +11,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -43,6 +32,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { UserForm, formSchema } from "./user-form";
+import * as z from "zod";
 
 interface UsersClientProps {
   permissions: AccessPermissions;
@@ -52,14 +43,6 @@ interface UsersClientProps {
 export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
-    username: "",
-    name: "",
-    email: "",
-    password: "",
-    roleId: "",
-  });
-
   const queryClient = useQueryClient();
 
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
@@ -90,6 +73,10 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
       email: string;
       password: string;
       roleId: number;
+      name?: string;
+      position?: string;
+      positionDescription?: string;
+      category?: string;
     }) => services.user.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -114,6 +101,10 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
         email: string;
         password?: string;
         roleId: number;
+        name?: string;
+        position?: string;
+        positionDescription?: string;
+        category?: string;
       };
     }) => services.user.update(id, data),
     onSuccess: () => {
@@ -165,7 +156,6 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
   const updateOrderMutation = useMutation({
     mutationFn: ({ userId, newIndex }: { userId: number; newIndex: number }) =>
       services.user.updateUserOrder({ userId, newIndex }),
-    // Remove the onSuccess callback since we're updating optimistically
     onError: (error) => {
       toast.error(
         error instanceof Error ? error.message : "Failed to update user order"
@@ -179,7 +169,6 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
     const sourceIndex = result.source.index;
     const destinationIndex = result.destination.index;
 
-    // Optimistically update the UI immediately
     queryClient.setQueryData(["users"], (oldData: User[] | undefined) => {
       if (!oldData) return oldData;
 
@@ -190,7 +179,6 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
       return items;
     });
 
-    // Update the order in the database in the background
     const reorderedItem = usersData?.[sourceIndex];
     if (reorderedItem) {
       updateOrderMutation.mutate(
@@ -200,7 +188,6 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
         },
         {
           onError: () => {
-            // Revert the optimistic update on error
             queryClient.invalidateQueries({ queryKey: ["users"] });
             toast.error(
               "Failed to update user order. Changes have been reverted."
@@ -219,26 +206,32 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
     togglePublishedMutation.mutate({ userId, published: !currentPublished });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!permissions.canManageUsers) {
       toast.error("You don't have permission to manage users");
       return;
     }
 
     const userData = {
-      ...formData,
-      roleId: Number.parseInt(formData.roleId),
+      ...data,
+      roleId: Number.parseInt(data.roleId),
     };
 
     if (selectedUser) {
-      // If password is empty in edit mode, don't include it in the update
-      const updateData = formData.password
+      const updateData = data.password
         ? userData
         : { ...userData, password: undefined };
       updateMutation.mutate({ id: selectedUser.id, data: updateData });
     } else {
-      createMutation.mutate(userData);
+      if (!userData.password) {
+        toast.error("Password is required for creating a new user");
+        return;
+      }
+      createMutation.mutate({
+        ...userData,
+        password: userData.password!,
+        position: userData.position,
+      });
     }
   };
 
@@ -253,25 +246,11 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
 
   const openEditDialog = (user: User) => {
     setSelectedUser(user);
-    setFormData({
-      username: user.username,
-      name: user.name || "", // Optional field
-      email: user.email,
-      password: "", // Don't show password in edit mode
-      roleId: user.roleId.toString(),
-    });
     setIsDialogOpen(true);
   };
 
   const openCreateDialog = () => {
     setSelectedUser(null);
-    setFormData({
-      username: "",
-      name: "",
-      email: "",
-      password: "",
-      roleId: "",
-    });
     setIsDialogOpen(true);
   };
 
@@ -304,7 +283,6 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                     <TableCell>
                       <Skeleton className="w-24 h-4" />
                     </TableCell>
-
                     <TableCell>
                       <Skeleton className="w-32 h-4" />
                     </TableCell>
@@ -353,89 +331,14 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                     : "Create a new user account"}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) =>
-                      setFormData({ ...formData, username: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">
-                    {selectedUser
-                      ? "New Password (leave blank to keep current)"
-                      : "Password"}
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    required={!selectedUser}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select
-                    value={formData.roleId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, roleId: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {rolesData?.map((role) => (
-                        <SelectItem key={role.id} value={role.id.toString()}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createMutation.isPending || updateMutation.isPending
-                    }
-                  >
-                    {selectedUser ? "Update User" : "Create User"}
-                  </Button>
-                </DialogFooter>
-              </form>
+              <UserForm
+                selectedUser={selectedUser}
+                rolesData={rolesData || []}
+                onSubmit={handleSubmit}
+                isSubmitting={
+                  createMutation.isPending || updateMutation.isPending
+                }
+              />
             </DialogContent>
           </Dialog>
         )}

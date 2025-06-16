@@ -21,15 +21,15 @@ export async function POST(request: Request) {
         }
 
         const response = await services.newsletter.subscribe(validation.data)
-
+        console.log("Subscription response:", response)
         if (!response.success) {
             return NextResponse.json(
-                { error: response.error },
+                response,
                 { status: 400 }
             )
         }
 
-        return NextResponse.json(response.data)
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error subscribing to newsletter:', error)
         return NextResponse.json(

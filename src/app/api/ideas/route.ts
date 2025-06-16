@@ -1,44 +1,39 @@
 import { NextResponse } from 'next/server'
 import services from '@/lib/services'
+import { z } from 'zod'
+const ideaSchema = z.object({
+    studentId: z.string().min(1, 'Student ID is required'),
+    title: z.string().min(5, 'Title must be at least 5 characters long'),
+    description: z.string().min(10, 'Description must be at least 10 characters long'),
+    category: z.string().min(3, 'Category must be at least 3 characters long')
+});
 
-export async function GET(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url)
-        const status = searchParams.get('status') || undefined
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '10')
 
-        const response = await services.idea.getIdeas(status, page, limit)
-        if (!response.success) {
-            return NextResponse.json(
-                { error: response.error },
-                { status: 400 }
-            )
-        }
-
-        return NextResponse.json(response.data)
-    } catch (error) {
-        console.error('Error fetching ideas:', error)
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        )
-    }
-}
 
 export async function POST(request: Request) {
     try {
         const data = await request.json()
-        const response = await services.idea.submitIdea(data)
-
-        if (!response.success) {
+        // Validate the incoming data against the schema
+        const validation = ideaSchema.safeParse(data)
+        if (!validation.success) {
             return NextResponse.json(
-                { error: response.error },
+                { error: validation.error.errors[0].message },
                 { status: 400 }
             )
         }
 
-        return NextResponse.json(response.data)
+        const response = await services.idea.submitIdea(data)
+        if (!response.success) {
+            return NextResponse.json(
+                response,
+                {
+                    status:
+                        response.error === 'Unauthorized' ? 200 : 400
+                }
+            )
+        }
+
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error submitting idea:', error)
         return NextResponse.json(

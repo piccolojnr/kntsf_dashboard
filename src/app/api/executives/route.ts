@@ -1,17 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma/client";
-import { Prisma } from "@prisma/client";
+import { type NextRequest, NextResponse } from "next/server"
+import prisma from "@/lib/prisma/client"
+import type { Prisma } from "@prisma/client"
 
 export async function GET(request: NextRequest) {
     try {
-        const searchParams = request.nextUrl.searchParams;
-        const category = searchParams.get("category");
+        const searchParams = request.nextUrl.searchParams
+        const category = searchParams.get("category")
 
-        const where: Prisma.UserWhereInput
-            = {
+        const where: Prisma.UserWhereInput = {
             ...(category && { category }),
-            published: true
-        };
+            published: true,
+        }
 
         const executives = await prisma.user.findMany({
             where,
@@ -26,23 +25,35 @@ export async function GET(request: NextRequest) {
                 category: true,
                 email: true,
             },
-            orderBy: {
-                index: "asc",
-            },
-        });
+            orderBy: [{ index: "asc" }, { name: "asc" }],
+        })
+
+        // Transform the data to match our Executive interface
+        const transformedExecutives = executives.map((exec) => ({
+            id: exec.id,
+            name: exec.name || "Unknown",
+            image: exec.image,
+            position: exec.position || "Executive",
+            positionDescription: exec.positionDescription,
+            biography: exec.biography,
+            socialLinks: exec.socialLinks as any,
+            category: exec.category || "other_executive",
+            email: exec.email,
+        }))
 
         return NextResponse.json({
             success: true,
-            data: executives,
-        });
+            data: transformedExecutives,
+            total: transformedExecutives.length,
+        })
     } catch (error: any) {
-        console.error("Error fetching executives:", error);
+        console.error("Error fetching executives:", error)
         return NextResponse.json(
             {
                 success: false,
                 error: "Failed to fetch executives",
             },
-            { status: 500 }
-        );
+            { status: 500 },
+        )
     }
-} 
+}

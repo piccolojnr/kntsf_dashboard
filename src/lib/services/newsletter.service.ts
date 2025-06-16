@@ -41,17 +41,7 @@ export interface NewsletterSubscriber {
 
 export async function subscribe(data: SubscribeData): Promise<ServiceResponse<{ message: string }>> {
     try {
-        const session = await getSession();
 
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const { id } = session.user as any;
-
-        if (!id) {
-            return { success: false, error: 'Unauthorized' };
-        }
         // Check if email already exists
         const existingSubscriber = await prisma.newsletterSubscriber.findUnique({
             where: { email: data.email }
@@ -80,7 +70,7 @@ export async function subscribe(data: SubscribeData): Promise<ServiceResponse<{ 
             data: {
                 email: data.email,
                 name: data.name,
-                studentId: parseInt(id),
+                studentId: parseInt(data.studentId || '0', 10),
                 token
             }
         })

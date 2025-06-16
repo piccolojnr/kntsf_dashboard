@@ -7,6 +7,7 @@ import { handleError } from '../utils'
 import { getSession } from '../auth/auth'
 
 export interface IdeaData {
+    studentId: string
     title: string
     description: string
     category: string
@@ -39,20 +40,20 @@ export interface PaginatedResponse<T> {
 
 export async function submitIdea(data: IdeaData): Promise<ServiceResponse<IdeaWithRelations>> {
     try {
-        const session = await getSession()
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' }
-        }
+        const { studentId } = data
 
-        const { id } = session.user as any
-        if (!id) {
-            return { success: false, error: 'Unauthorized' }
-        }
 
         // Get student record
         const student = await prisma.student.findFirst({
-            where: { email: session.user.email as string }
+            where: {
+                studentId: studentId
+            }
         })
+
+        if (!student) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
 
         if (!student) {
             return { success: false, error: 'Student record not found' }

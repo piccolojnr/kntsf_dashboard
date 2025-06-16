@@ -248,7 +248,7 @@ export async function updateIdeaStatus(
                 status,
                 reviewNotes,
                 reviewedBy: {
-                    connect: { id: userId }
+                    connect: { id: parseInt(userId) }
                 }
             },
             include: {

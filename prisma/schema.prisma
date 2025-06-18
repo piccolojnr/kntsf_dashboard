@@ -75,6 +75,7 @@ model Student {
   payments    Payment[] // Payments made by this student
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime? // Soft delete
   StudentIdea StudentIdea[]
 }
 
@@ -286,7 +287,7 @@ model StudentIdea {
   description  String     @db.Text
   category     String // e.g., "Academic", "Student Life", "Administrative"
   status       IdeaStatus @default(PENDING)
-  student      Student    @relation(fields: [studentId], references: [id])
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId    Int
   reviewedBy   User?      @relation(fields: [reviewedById], references: [id])
   reviewedById Int?

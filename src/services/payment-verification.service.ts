@@ -86,8 +86,6 @@ export class PaymentVerificationService {
                 const res = await services.permit.create({
                     studentId: payment.student.studentId + "",
                     paymentId: payment.id,
-                    amountPaid: payment.amount,
-                    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
                 })
                 permit = res.data || null
             } else if (paymentStatus === 'SUCCESS' && payment.permitId) {
@@ -164,8 +162,6 @@ export class PaymentVerificationService {
                     await services.permit.create({
                         studentId: payment.student.studentId + "",
                         paymentId: payment.id,
-                        amountPaid: payment.amount,
-                        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
                     })
                 } else if (payment.permitId) {
                     await prisma.permit.findUnique({

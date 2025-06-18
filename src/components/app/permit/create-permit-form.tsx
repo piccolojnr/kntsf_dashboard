@@ -1,7 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { AlertCircle, CalendarIcon } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { usePermitCreation } from "@/hooks/use-permit-creation";
@@ -9,10 +8,8 @@ import {
   permitFormSchema,
   PermitFormValues,
 } from "@/lib/schemas/permit-schema";
-import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -23,11 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import { toast } from "sonner";
 
 interface CreatePermitFormProps {
@@ -35,12 +28,6 @@ interface CreatePermitFormProps {
   onSuccess: () => void;
   studentId?: string;
 }
-
-const getTomorrowDate = (): Date => {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow;
-};
 
 export default function CreatePermitForm({
   setIsDialogOpen,
@@ -54,8 +41,6 @@ export default function CreatePermitForm({
     resolver: zodResolver(permitFormSchema),
     defaultValues: {
       studentId: studentId || "",
-      amountPaid: "",
-      expiryDate: getTomorrowDate(),
     },
   });
 
@@ -65,7 +50,6 @@ export default function CreatePermitForm({
     try {
       const res = await createPermit({
         ...values,
-        amountPaid: Number.parseFloat(values.amountPaid),
       });
       console.log("Permit creation response:", res);
 
@@ -76,8 +60,6 @@ export default function CreatePermitForm({
 
       form.reset({
         studentId: "",
-        amountPaid: "",
-        expiryDate: getTomorrowDate(),
       });
 
       setIsDialogOpen(false);
@@ -123,77 +105,6 @@ export default function CreatePermitForm({
                     {studentId
                       ? "Student ID is pre-filled"
                       : "Enter the student's unique ID number"}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="amountPaid"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount Paid (GHS) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      disabled={isSubmitting}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Enter the amount paid for the permit
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="expiryDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Expiry Date *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                          disabled={isSubmitting}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="w-4 h-4 ml-auto opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          return date < today;
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormDescription>
-                    Select when the permit will expire
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -276,4 +276,44 @@ export async function updateIdeaStatus(
         log.error('Error updating idea status:', error)
         return handleError(error)
     }
+}
+
+export async function getById(id: number): Promise<ServiceResponse<IdeaWithRelations>> {
+    try {
+        const session = await getSession()
+        if (!session?.user) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        const idea = await prisma.studentIdea.findUnique({
+            where: { id },
+            include: {
+                student: {
+                    select: {
+                        name: true,
+                        email: true,
+                        studentId: true
+                    }
+                },
+                reviewedBy: {
+                    select: {
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        })
+
+        if (!idea) {
+            return { success: false, error: 'Idea not found' }
+        }
+
+        return {
+            success: true,
+            data: idea
+        }
+    } catch (error) {
+        log.error('Error fetching idea:', error)
+        return handleError(error)
+    }
 } 

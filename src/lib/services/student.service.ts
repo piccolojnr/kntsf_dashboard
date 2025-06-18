@@ -43,9 +43,12 @@ export async function getAll(params: {
           { studentId: { contains: search } },
           { email: { contains: search } },
           { course: { contains: search } }
-        ]
+        ],
+        deletedAt: null,
       }
-      : {}
+      : {
+        deletedAt: null,
+      }
     const skip = Math.max((page - 1) * pageSize, 0)
     const [total, students] = await Promise.all([
       prisma.student.count({ where }),
@@ -129,13 +132,16 @@ export async function deleteStudent(studentId: string): Promise<ServiceResponse<
       if (!st) {
         throw new Error('Student not found')
       }
-      await tx.permit.deleteMany({
-        where: {
-          studentId: st.id
+      await tx.permit.deleteMany({ where: { studentId: st.id } })
+      await tx.studentIdea.deleteMany({ where: { studentId: st.id } })
+      await tx.student.update({
+        where: { studentId },
+        data: {
+          deletedAt: new Date(),
+          studentId: `ARCHIVED-${st.studentId}-${Date.now()}`,
+          name: `[ARCHIVED] ${st.name}`,
+          email: `archived-${Date.now()}-${st.email}`,
         }
-      })
-      await tx.student.delete({
-        where: { studentId: studentId }
       })
     })
     return { success: true }

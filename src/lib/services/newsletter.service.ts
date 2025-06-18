@@ -7,9 +7,9 @@ import { handleError } from '../utils'
 import { randomBytes } from 'crypto'
 import { sendEmail } from './email.service'
 import { generateNewsletterConfirmationTemplate } from '@/lib/email/templates-views/newsletter-confirmation-template'
-import { generateNewsletterEmailTemplate } from '@/lib/email/templates-views/newsletter-email-template'
 import { getSession } from '../auth/auth'
 import { Newsletter } from '@prisma/client'
+import { NewsletterBase } from '../email/templates-views/newsletter-base'
 
 export interface SubscribeData {
     email: string
@@ -319,11 +319,13 @@ export async function sendNewsletter(id: number): Promise<ServiceResponse<{ mess
 
         // Send email to each subscriber
         for (const subscriber of subscribers) {
-            const emailTemplate = generateNewsletterEmailTemplate({
-                name: subscriber.name || 'there',
+            const emailTemplate = NewsletterBase({
+                previewText: 'Latest newsletter from KNUST SRC',
+                unsubscribeUrl: `${process.env.NEXT_PUBLIC_APP_URL}/newsletter/unsubscribe?email=${subscriber.email}`,
                 title: newsletter.title,
                 content: newsletter.content
             })
+
 
             await sendEmail({
                 to: subscriber.email,
@@ -351,4 +353,65 @@ export async function sendNewsletter(id: number): Promise<ServiceResponse<{ mess
         log.error('Error sending newsletter:', error)
         return handleError(error)
     }
-} 
+}
+
+export async function getNewsletterById(id: number): Promise<ServiceResponse<NewsletterWithRelations>> {
+    try {
+        const newsletter = await prisma.newsletter.findUnique({
+            where: { id },
+            include: {
+                sentBy: {
+                    select: {
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        })
+
+        if (!newsletter) {
+            return {
+                success: false,
+                error: 'Newsletter not found'
+            }
+        }
+
+        return {
+            success: true,
+            data: newsletter
+        }
+    } catch (error) {
+        log.error('Error fetching newsletter by ID:', error)
+        return handleError(error)
+    }
+}
+
+
+export async function deleteNewsletter(id: number): Promise<ServiceResponse<{ message: string }>> {
+    try {
+        const newsletter = await prisma.newsletter.findUnique({
+            where: { id }
+        })
+
+        if (!newsletter) {
+            return {
+                success: false,
+                error: 'Newsletter not found'
+            }
+        }
+
+        await prisma.newsletter.delete({
+            where: { id }
+        })
+
+        return {
+            success: true,
+            data: {
+                message: 'Newsletter deleted successfully'
+            }
+        }
+    } catch (error) {
+        log.error('Error deleting newsletter:', error)
+        return handleError(error)
+    }
+}

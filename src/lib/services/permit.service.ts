@@ -12,9 +12,7 @@ import { handleError } from '../utils'
 
 export interface PermitData {
   studentId: string
-  amountPaid: number
   paymentId?: number
-  expiryDate: Date
 }
 
 export interface PaginatedResponse<T> {
@@ -120,13 +118,26 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
     const permitCode = `${yearPrefix}-${code}`
     const hashedCode = await bcrypt.hash(permitCode, 10)
 
+    const config = await prisma.config.findFirst({
+      where: {
+        id: 1
+      },
+      include: {
+        permitConfig: true
+      }
+    })
+
+    if (!config) {
+      return { success: false, error: 'Configuration not found' }
+    }
+
     const permit = await prisma.permit.create({
       data: {
         permitCode: hashedCode,
         originalCode: permitCode,
         payment: permitData.paymentId ? { connect: { id: permitData.paymentId } } : undefined,
-        expiryDate: permitData.expiryDate,
-        amountPaid: permitData.amountPaid,
+        expiryDate: config.permitConfig?.expirationDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        amountPaid: config.permitConfig?.defaultAmount || 100,
         studentId: student.id,
         issuedById: session ? parseInt((session.user as any).id) : null,
         status: 'active'

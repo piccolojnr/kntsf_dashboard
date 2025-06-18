@@ -23,6 +23,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import services from "@/lib/services";
 import { MyPagination } from "@/components/common/my-pagination";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -157,7 +159,16 @@ export function IdeaClient() {
               ) : (
                 ideasData?.data.map((idea) => (
                   <TableRow key={idea.id}>
-                    <TableCell>{idea.title}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-normal"
+                        asChild>
+                        <Link href={`/dashboard/ideas/${idea.id}`}>
+                          {idea.title}
+                        </Link>
+                      </Button>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{idea.category}</Badge>
                     </TableCell>

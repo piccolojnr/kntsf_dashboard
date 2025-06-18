@@ -100,13 +100,18 @@ export async function uploadDocument(data: DocumentData): Promise<ServiceRespons
         // create filename from document title
         const fileName = data.title.replace(/\s+/g, '_').toLowerCase() + `.${extension}`
         const buffer = Buffer.from(await data.file.arrayBuffer())
+
+        // Determine resource type based on file extension
+        const resourceType = ['jpg', 'jpeg', 'png', 'gif'].includes(extension) ? 'image' : 'raw'
+
         const uploadResult = await new Promise<any>((resolve, reject) => {
             cloudinary.uploader.upload_stream(
                 {
                     folder: 'documents',
-                    resource_type: 'raw',
+                    resource_type: resourceType,
                     public_id: fileName,
-                    filename: fileName
+                    filename: fileName,
+                    access_mode: 'public'
                 },
                 (error, result) => {
                     if (error) reject(error)
@@ -114,6 +119,7 @@ export async function uploadDocument(data: DocumentData): Promise<ServiceRespons
                 }
             ).end(buffer)
         })
+
 
         // Create document record
         const document = await prisma.document.create({
@@ -227,9 +233,22 @@ export async function getDocumentById(id: number): Promise<ServiceResponse<Docum
             }
         })
 
+        // For raw files, get the download URL
+        const fileUrl = document.fileUrl
+        const extension = getFileExtension(fileUrl)
+        const isRawFile = !['jpg', 'jpeg', 'png', 'gif'].includes(extension)
+
+        // If it's a raw file, get the download URL
+        const downloadUrl = isRawFile
+            ? fileUrl.replace('/upload/', '/upload/fl_attachment/')
+            : fileUrl
+
         return {
             success: true,
-            data: document
+            data: {
+                ...document,
+                fileUrl: downloadUrl
+            }
         }
     } catch (error) {
         log.error('Error fetching document:', error)

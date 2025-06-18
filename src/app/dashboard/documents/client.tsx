@@ -39,6 +39,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { MyPagination } from "@/components/common/my-pagination";
+import Link from "next/link";
 const ITEMS_PER_PAGE = 10;
 
 export function DocumentClient() {
@@ -138,7 +139,15 @@ export function DocumentClient() {
       return response.data;
     },
     onSuccess: (data) => {
-      window.open(data?.fileUrl, "_blank");
+      if (!data) return;
+
+      // Create a temporary link element
+      const link = document.createElement("a");
+      link.href = data.fileUrl;
+      link.download = data.title + "." + data.fileUrl.split(".").pop();
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to download document");
@@ -299,7 +308,17 @@ export function DocumentClient() {
               ) : (
                 documentsData?.data?.map((doc) => (
                   <TableRow key={doc.id}>
-                    <TableCell>{doc.title}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-normal"
+                        asChild
+                      >
+                        <Link href={`/dashboard/documents/${doc.id}`}>
+                          {doc.title}
+                        </Link>
+                      </Button>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{doc.category}</Badge>
                     </TableCell>

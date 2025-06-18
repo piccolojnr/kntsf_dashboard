@@ -162,28 +162,24 @@ model Event {
 
 model Config {
   id             Int             @id @default(autoincrement())
-  appName        String          @default("KNUST SRC Permit System")
-  appDescription String?         @db.Text
-  appLogo        String? // URL to app logo
-  appFavicon     String? // URL to favicon
   contactInfo    ContactInfo?
   semesterConfig SemesterConfig?
   permitConfig   PermitConfig?
-  socialLinks    Json? // Social media links
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
 
 model ContactInfo {
-  id        Int      @id @default(autoincrement())
-  email     String?
-  phone     String?
-  address   String?  @db.Text
-  website   String?
-  config    Config   @relation(fields: [configId], references: [id])
-  configId  Int      @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  email       String?
+  phone       String?
+  address     String?  @db.Text
+  website     String?
+  config      Config   @relation(fields: [configId], references: [id])
+  socialLinks Json? // Social media links
+  configId    Int      @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model SemesterConfig {

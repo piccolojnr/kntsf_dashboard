@@ -7,7 +7,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import services from "@/lib/services";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GeneralSettings } from "@/components/app/settings/sections/general-settings";
 import { ContactSettings } from "@/components/app/settings/sections/contact-settings";
 import { SemesterSettings } from "@/components/app/settings/sections/semester-settings";
 import { PermitSettings } from "@/components/app/settings/sections/permit-settings";
@@ -20,7 +19,7 @@ interface SettingsClientProps {
 }
 
 export function SettingsClient({}: SettingsClientProps) {
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("contact");
   const queryClient = useQueryClient();
 
   const { data: config, isLoading } = useQuery({
@@ -61,21 +60,10 @@ export function SettingsClient({}: SettingsClientProps) {
         className="space-y-4"
       >
         <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="contact">Contact Info</TabsTrigger>
           <TabsTrigger value="semester">Semester</TabsTrigger>
           <TabsTrigger value="permit">Permit Settings</TabsTrigger>
         </TabsList>
-        <TabsContent value="general">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <GeneralSettings config={config} onUpdate={handleConfigUpdate} />
-            </CardContent>
-          </Card>
-        </TabsContent>
         <TabsContent value="contact">
           <Card>
             <CardHeader>
@@ -83,7 +71,7 @@ export function SettingsClient({}: SettingsClientProps) {
             </CardHeader>
             <CardContent>
               <ContactSettings
-                contactInfo={config.contactInfo}
+                contactInfo={config.contactInfo as any}
                 onUpdate={handleConfigUpdate}
               />
             </CardContent>

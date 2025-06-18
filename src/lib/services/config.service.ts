@@ -5,15 +5,8 @@ import { log } from '../logger'
 import { ServiceResponse } from '../types/common'
 import { handleError } from '../utils'
 import { Config, ContactInfo, PermitConfig, SemesterConfig } from '@prisma/client'
-import cloudinary from '../cloudinary'
 
 export interface ConfigUpdateData {
-    appName?: string
-    appDescription?: string
-    appLogo?: string
-    appFavicon?: string
-    primaryColor?: string
-    secondaryColor?: string
     socialLinks?: Record<string, string>
 }
 
@@ -22,6 +15,7 @@ export interface ContactInfoUpdateData {
     phone?: string
     address?: string
     website?: string
+    socialLinks?: Record<string, string | undefined>
 }
 
 export interface FooterSectionUpdateData {
@@ -52,16 +46,12 @@ export interface ConfigWithRelations extends Config {
 }
 
 export interface PublicConfig {
-    appName: string
-    appDescription: string | null
-    appLogo: string | null
-    appFavicon: string | null
-    socialLinks: Record<string, string> | null
     contactInfo: {
         email: string | null
         phone: string | null
         address: string | null
         website: string | null
+        socialLinks: Record<string, string> | null
     } | null
     semesterConfig: {
         currentSemester: string
@@ -122,16 +112,12 @@ export async function getPublicConfig(): Promise<ServiceResponse<PublicConfig>> 
 
         // Transform the config to only include public information
         const publicConfig: PublicConfig = {
-            appName: config.appName,
-            appDescription: config.appDescription,
-            appLogo: config.appLogo,
-            appFavicon: config.appFavicon,
-            socialLinks: config.socialLinks as Record<string, string> | null,
             contactInfo: config.contactInfo ? {
                 email: config.contactInfo.email,
                 phone: config.contactInfo.phone,
                 address: config.contactInfo.address,
-                website: config.contactInfo.website
+                website: config.contactInfo.website,
+                socialLinks: config.contactInfo.socialLinks as Record<string, string> | null,
             } : null,
             semesterConfig: config.semesterConfig ? {
                 currentSemester: config.semesterConfig.currentSemester,
@@ -156,38 +142,6 @@ export async function getPublicConfig(): Promise<ServiceResponse<PublicConfig>> 
     }
 }
 
-export async function uploadConfigImage(formData: FormData, type: 'logo' | 'favicon'): Promise<ServiceResponse<{ url: string }>> {
-    try {
-        const file = formData.get('image') as File;
-        if (!file) {
-            return { success: false, error: 'No file uploaded' };
-        }
-
-        const buffer = Buffer.from(await file.arrayBuffer());
-
-        const uploadResult = await new Promise<any>((resolve, reject) => {
-            cloudinary.uploader.upload_stream(
-                {
-                    folder: 'knust-src',
-                    public_id: `config_${type}`,
-                    overwrite: true,
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            ).end(buffer);
-        });
-
-        return {
-            success: true,
-            data: { url: uploadResult.secure_url }
-        };
-    } catch (error) {
-        log.error('Failed to upload config image:', error);
-        return handleError(error);
-    }
-}
 
 export async function updateConfig(data: ConfigUpdateData): Promise<ServiceResponse> {
     try {

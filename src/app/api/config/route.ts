@@ -12,7 +12,7 @@ export async function GET() {
             );
         }
 
-        return NextResponse.json(response.data);
+        return NextResponse.json(response);
     } catch (error) {
         console.error('Error fetching public config:', error);
         return NextResponse.json(

@@ -343,21 +343,19 @@ async function main() {
         where: { id: 1 },
         update: {},
         create: {
-            appName: "KNUST SRC Permit System",
-            appDescription: "Official permit management system for KNUST SRC",
-            appLogo: "https://res.cloudinary.com/your-cloud-name/image/upload/v1/knust-src/logo.png",
-            appFavicon: "https://res.cloudinary.com/your-cloud-name/image/upload/v1/knust-src/favicon.ico",
-            socialLinks: {
-                facebook: "https://facebook.com/knustsrc",
-                twitter: "https://twitter.com/knustsrc",
-                instagram: "https://instagram.com/knustsrc"
-            },
+
             contactInfo: {
                 create: {
                     email: "src@knust.edu.gh",
                     phone: "+233 XX XXX XXXX",
                     address: "KNUST Main Campus, Kumasi, Ghana",
-                    website: "https://knust.edu.gh/src"
+                    website: "https://knust.edu.gh/src",
+                    socialLinks: {
+                        facebook: "https://facebook.com/knustsrc",
+                        twitter: "https://twitter.com/knustsrc",
+                        instagram: "https://instagram.com/knustsrc"
+                    },
+
                 }
             },
             semesterConfig: {

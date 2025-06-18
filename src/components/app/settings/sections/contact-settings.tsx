@@ -8,12 +8,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import services from "@/lib/services";
 
+interface SocialLinks {
+  facebook?: string;
+  twitter?: string;
+  instagram?: string;
+  tiktok?: string;
+  youtube?: string;
+  linkedin?: string;
+  [key: string]: string | undefined;
+}
+
 interface ContactInfo {
   id: number;
   email: string | null;
   phone: string | null;
   address: string | null;
   website: string | null;
+  socialLinks: SocialLinks | null;
 }
 
 interface ContactSettingsProps {
@@ -31,6 +42,14 @@ export function ContactSettings({
     phone: contactInfo?.phone || "",
     address: contactInfo?.address || "",
     website: contactInfo?.website || "",
+    socialLinks: contactInfo?.socialLinks || {
+      facebook: "",
+      twitter: "",
+      instagram: "",
+      tiktok: "",
+      youtube: "",
+      linkedin: "",
+    },
   });
 
   const handleSubmit = useCallback(
@@ -54,6 +73,19 @@ export function ContactSettings({
       }
     },
     [formData, onUpdate]
+  );
+
+  const handleSocialLinkChange = useCallback(
+    (platform: string, value: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        socialLinks: {
+          ...prev.socialLinks,
+          [platform]: value,
+        },
+      }));
+    },
+    []
   );
 
   return (
@@ -107,6 +139,77 @@ export function ContactSettings({
             }
             placeholder="Enter website URL"
           />
+        </div>
+        <div className="space-y-4">
+          <Label>Social Media Links</Label>
+          <div className="space-y-2">
+            <div>
+              <Label htmlFor="facebook">Facebook</Label>
+              <Input
+                id="facebook"
+                value={formData.socialLinks.facebook}
+                onChange={(e) =>
+                  handleSocialLinkChange("facebook", e.target.value)
+                }
+                placeholder="Enter Facebook URL"
+              />
+            </div>
+            <div>
+              <Label htmlFor="twitter">Twitter</Label>
+              <Input
+                id="twitter"
+                value={formData.socialLinks.twitter}
+                onChange={(e) =>
+                  handleSocialLinkChange("twitter", e.target.value)
+                }
+                placeholder="Enter Twitter URL"
+              />
+            </div>
+            <div>
+              <Label htmlFor="instagram">Instagram</Label>
+              <Input
+                id="instagram"
+                value={formData.socialLinks.instagram}
+                onChange={(e) =>
+                  handleSocialLinkChange("instagram", e.target.value)
+                }
+                placeholder="Enter Instagram URL"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tiktok">TikTok</Label>
+              <Input
+                id="tiktok"
+                value={formData.socialLinks.tiktok}
+                onChange={(e) =>
+                  handleSocialLinkChange("tiktok", e.target.value)
+                }
+                placeholder="Enter TikTok URL"
+              />
+            </div>
+            <div>
+              <Label htmlFor="youtube">YouTube</Label>
+              <Input
+                id="youtube"
+                value={formData.socialLinks.youtube}
+                onChange={(e) =>
+                  handleSocialLinkChange("youtube", e.target.value)
+                }
+                placeholder="Enter YouTube URL"
+              />
+            </div>
+            <div>
+              <Label htmlFor="linkedin">LinkedIn</Label>
+              <Input
+                id="linkedin"
+                value={formData.socialLinks.linkedin}
+                onChange={(e) =>
+                  handleSocialLinkChange("linkedin", e.target.value)
+                }
+                placeholder="Enter LinkedIn URL"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

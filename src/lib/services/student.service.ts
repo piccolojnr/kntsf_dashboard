@@ -199,3 +199,27 @@ export async function importStudent(fileContent: string): Promise<ServiceRespons
     return handleError(error)
   }
 }
+
+
+// search student by studentId or name
+export async function searchStudent(
+  query: string
+): Promise<ServiceResponse<Student[]>> {
+  try {
+    const students = await prisma.student.findMany({
+      where: {
+        OR: [
+          { studentId: { contains: query } },
+          { name: { contains: query } }
+        ],
+        deletedAt: null
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return { success: true, data: students }
+  } catch (error) {
+    log.error('Failed to search students:', error)
+    return handleError(error)
+  }
+}

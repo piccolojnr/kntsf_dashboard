@@ -27,13 +27,13 @@ import {
   SessionUser,
   StudentDetails as StudentDetailsType,
 } from "@/lib/types/common";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 
 export function StudentDetails({
   permissions,
 }: {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }) {
   const { id } = useParams();
   const router = useRouter();
@@ -95,7 +95,7 @@ export function StudentDetails({
           </Button>
           <h2 className="text-3xl font-bold tracking-tight">Student Details</h2>
         </div>
-        {permissions.canCreatePermits && (
+        {permissions.isExecutive && (
           <Dialog
             open={isPermitDialogOpen}
             onOpenChange={setIsPermitDialogOpen}
@@ -106,7 +106,7 @@ export function StudentDetails({
                 New Permit
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Create New Permit</DialogTitle>
                 <DialogDescription>

@@ -30,13 +30,13 @@ import {
   SessionUser,
   StudentDetails as StudentDetailsType,
 } from "@/lib/types/common";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
 interface StudentDetailsClientProps {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
   studentId: string;
 }
 
@@ -148,7 +148,7 @@ export function StudentDetailsClient({
           </Button>
           <h2 className="text-3xl font-bold tracking-tight">Student Details</h2>
         </div>
-        {permissions.canCreatePermits && (
+        {permissions.isExecutive && (
           <Dialog
             open={isPermitDialogOpen}
             onOpenChange={setIsPermitDialogOpen}
@@ -159,7 +159,7 @@ export function StudentDetailsClient({
                 New Permit
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Create New Permit</DialogTitle>
                 <DialogDescription>

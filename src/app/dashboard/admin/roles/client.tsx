@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import services from "@/lib/services";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -36,7 +36,7 @@ interface RoleWithPermissions {
 }
 
 interface RolesClientProps {
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }
 
 export function RolesClient({ permissions }: RolesClientProps) {
@@ -116,7 +116,7 @@ export function RolesClient({ permissions }: RolesClientProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!permissions.canManageRoles) {
+    if (!permissions.isAdmin) {
       toast.error("You don't have permission to manage roles");
       return;
     }
@@ -128,7 +128,7 @@ export function RolesClient({ permissions }: RolesClientProps) {
   };
 
   const handleDelete = async (roleId: number) => {
-    if (!permissions.canManageRoles) {
+    if (!permissions.isAdmin) {
       toast.error("You don't have permission to delete roles");
       return;
     }
@@ -191,7 +191,7 @@ export function RolesClient({ permissions }: RolesClientProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Role Management</h2>
-        {permissions.canManageRoles && (
+        {permissions.isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={openCreateDialog}>
@@ -257,7 +257,7 @@ export function RolesClient({ permissions }: RolesClientProps) {
           <Card key={role.id}>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xl font-bold">{role.name}</CardTitle>
-              {permissions.canManageRoles && (
+              {permissions.isAdmin && (
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"

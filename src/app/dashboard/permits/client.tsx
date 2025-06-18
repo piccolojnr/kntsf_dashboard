@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { MyPagination } from "@/components/common/my-pagination";
 import services from "@/lib/services";
 import Link from "next/link";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import { SessionUser } from "@/lib/types/common";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -42,7 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface PermitsClientProps {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }
 
 export function PermitsClient({ permissions }: PermitsClientProps) {
@@ -73,7 +73,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
 
   const handleRevoke = useCallback(
     async (permitId: number) => {
-      if (!permissions.canRevokePermits) {
+      if (!permissions.isExecutive) {
         toast.error("You don't have permission to revoke permits");
         return;
       }
@@ -106,7 +106,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
         toast.error("Failed to revoke permit");
       }
     },
-    [permissions.canRevokePermits, queryClient]
+    [permissions.isExecutive, queryClient]
   );
 
   const isExpired = useCallback((expiryDate: Date): boolean => {
@@ -149,7 +149,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
-          {permissions.canCreatePermits && (
+          {permissions.isExecutive && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -157,7 +157,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                   New Permit
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Permit</DialogTitle>
                   <DialogDescription>
@@ -247,9 +247,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                   <TableHead>Expiry Date</TableHead>
                   <TableHead>Amount Paid</TableHead>
                   <TableHead>Issued By</TableHead>
-                  {permissions.canRevokePermits && (
-                    <TableHead>Actions</TableHead>
-                  )}
+                  {permissions.isExecutive && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -292,19 +290,17 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                       <TableCell>
                         {permit.issuedBy?.username || "Unknown"}
                       </TableCell>
-                      {permissions.canRevokePermits && (
-                        <TableCell>
-                          {permit.status === "active" && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleRevoke(permit.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      )}
+                      <TableCell>
+                        {permit.status === "active" && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRevoke(permit.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}

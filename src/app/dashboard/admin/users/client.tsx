@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import type { AccessPermissions } from "@/lib/permissions";
+import type { AccessRoles } from "@/lib/role";
 import type { User } from "@prisma/client";
 import type { RoleWithPermissions, SessionUser } from "@/lib/types/common";
 import services from "@/lib/services";
@@ -36,7 +36,7 @@ import { UserForm, formSchema } from "./user-form";
 import * as z from "zod";
 
 interface UsersClientProps {
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
   user: SessionUser;
 }
 
@@ -199,7 +199,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
   };
 
   const handleTogglePublished = (userId: number, currentPublished: boolean) => {
-    if (!permissions.canManageUsers) {
+    if (!permissions.isAdmin) {
       toast.error("You don't have permission to manage users");
       return;
     }
@@ -207,7 +207,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
   };
 
   const handleSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (!permissions.canManageUsers) {
+    if (!permissions.isAdmin) {
       toast.error("You don't have permission to manage users");
       return;
     }
@@ -236,7 +236,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
   };
 
   const handleDelete = async (userId: number) => {
-    if (!permissions.canManageUsers) {
+    if (!permissions.isAdmin) {
       toast.error("You don't have permission to delete users");
       return;
     }
@@ -312,7 +312,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
-        {permissions.canManageUsers && (
+        {permissions.isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={openCreateDialog}>
@@ -441,7 +441,7 @@ export function UsersClient({ permissions, user: authUser }: UsersClientProps) {
                                 {user.index !== null ? user.index : "Unknown"}
                               </TableCell>
                               <TableCell>
-                                {permissions.canManageUsers && (
+                                {permissions.isAdmin && (
                                   <div className="flex space-x-2">
                                     <Button
                                       variant="outline"

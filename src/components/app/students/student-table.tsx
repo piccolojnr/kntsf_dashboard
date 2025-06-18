@@ -27,8 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface StudentTableProps {
   isLoading?: boolean;
   students: Student[];
-  canManageStudents: boolean;
-  canCreatePermits: boolean;
+  isExecutive: boolean;
   onEdit: (student: Student) => void;
   onDelete: (studentId: string) => void;
   onCreatePermit: (student: Student) => void;
@@ -37,8 +36,7 @@ interface StudentTableProps {
 export function StudentTable({
   students,
   isLoading,
-  canManageStudents,
-  canCreatePermits,
+  isExecutive,
   onEdit,
   onDelete,
   onCreatePermit,
@@ -117,9 +115,7 @@ export function StudentTable({
               <TableHead>Level</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Created At</TableHead>
-              {(canManageStudents || canCreatePermits) && (
-                <TableHead>Actions</TableHead>
-              )}
+              {isExecutive && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -141,7 +137,7 @@ export function StudentTable({
                 <TableCell>
                   {format(new Date(student.createdAt), "MMM d, yyyy")}
                 </TableCell>
-                {(canManageStudents || canCreatePermits) && (
+                {isExecutive && (
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -152,7 +148,7 @@ export function StudentTable({
                       <DropdownMenuContent>
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {canManageStudents && (
+                        {isExecutive && (
                           <>
                             <DropdownMenuItem onClick={() => onEdit(student)}>
                               <Pencil className="w-4 h-4 mr-2" /> Edit
@@ -166,7 +162,7 @@ export function StudentTable({
                             </DropdownMenuItem>
                           </>
                         )}
-                        {canCreatePermits && (
+                        {isExecutive && (
                           <DropdownMenuItem>
                             <Button
                               variant="ghost"

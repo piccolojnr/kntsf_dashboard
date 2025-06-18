@@ -11,12 +11,12 @@ import { GeneralSettings } from "@/components/app/settings/sections/general-sett
 import { ContactSettings } from "@/components/app/settings/sections/contact-settings";
 import { SemesterSettings } from "@/components/app/settings/sections/semester-settings";
 import { PermitSettings } from "@/components/app/settings/sections/permit-settings";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import { SessionUser } from "@/lib/types/common";
 
 interface SettingsClientProps {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }
 
 export function SettingsClient({}: SettingsClientProps) {

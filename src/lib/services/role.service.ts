@@ -7,7 +7,6 @@ import { handleError } from '../utils'
 export interface RoleData {
   name: string
   description?: string
-  permissionIds: number[]
 }
 
 export async function create(roleData: RoleData): Promise<ServiceResponse> {
@@ -16,21 +15,9 @@ export async function create(roleData: RoleData): Promise<ServiceResponse> {
       data: {
         name: roleData.name,
         description: roleData.description,
-        permissions: {
-          create: roleData.permissionIds.map((permissionId) => ({
-            permission: {
-              connect: { id: permissionId }
-            }
-          }))
-        }
+
       },
-      include: {
-        permissions: {
-          include: {
-            permission: true
-          }
-        }
-      }
+
     })
     return { success: true, data: role }
   } catch (error) {
@@ -44,13 +31,7 @@ export async function getById(roleId: number): Promise<ServiceResponse> {
   try {
     const role = await prisma.role.findUnique({
       where: { id: roleId },
-      include: {
-        permissions: {
-          include: {
-            permission: true
-          }
-        }
-      }
+
     })
     if (!role) {
       throw new Error('Role not found')
@@ -70,34 +51,11 @@ export async function update(roleId: number, roleData: Partial<RoleData>): Promi
       description: roleData.description
     }
 
-    if (roleData.permissionIds) {
-      // First delete existing permissions
-      await prisma.rolePermission.deleteMany({
-        where: { roleId }
-      })
-
-      // Then create new permissions
-      Object.assign(updateData, {
-        permissions: {
-          create: roleData.permissionIds.map((permissionId) => ({
-            permission: {
-              connect: { id: permissionId }
-            }
-          }))
-        }
-      })
-    }
 
     const role = await prisma.role.update({
       where: { id: roleId },
       data: updateData,
-      include: {
-        permissions: {
-          include: {
-            permission: true
-          }
-        }
-      }
+
     })
     return { success: true, data: role }
   } catch (error) {
@@ -123,13 +81,7 @@ export async function deleteRole(roleId: number): Promise<ServiceResponse> {
 export async function getAll(): Promise<ServiceResponse<RoleWithPermissions[]>> {
   try {
     const roles = await prisma.role.findMany({
-      include: {
-        permissions: {
-          include: {
-            permission: true
-          }
-        }
-      }
+
     })
     return { success: true, data: roles }
   } catch (error) {

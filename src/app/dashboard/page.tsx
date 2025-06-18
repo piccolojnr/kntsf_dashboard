@@ -1,11 +1,11 @@
 import ClientOnly from "./client";
-import { getPermissions } from "@/lib/permissions";
+import { getRole } from "@/lib/role";
 import { getCurrentUser } from "@/lib/auth/auth";
 
 export default async function Dashboard() {
   const user = await getCurrentUser();
 
-  const permissions = await getPermissions({
+  const permissions = await getRole({
     user,
   });
 

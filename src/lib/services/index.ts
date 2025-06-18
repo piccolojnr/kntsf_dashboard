@@ -2,7 +2,6 @@ import * as AuditService from "./audit.service";
 import * as AuthService from "./auth.service";
 import * as  DashboardService from "./dashboard.service";
 import * as EmailService from "./email.service";
-import * as  PermissionService from "./permission.service";
 import * as  PermitService from "./permit.service";
 import * as  RoleService from "./role.service";
 import * as  SettingsService from "./settings.service";
@@ -13,12 +12,12 @@ import * as  ConfigService from "./config.service";
 import * as  NewsletterService from "./newsletter.service";
 import * as  DocumentService from "./document.service";
 import * as  IdeaService from "./idea.service";
+import * as  PaymentService from "./payment.service";
 
 const services = {
     audit: AuditService,
     auth: AuthService,
     dashboard: DashboardService,
-    permission: PermissionService,
     role: RoleService,
     permit: PermitService,
     settings: SettingsService,
@@ -30,6 +29,7 @@ const services = {
     newsletter: NewsletterService,
     document: DocumentService,
     idea: IdeaService,
+    payment: PaymentService,
 }
 
 export default services;

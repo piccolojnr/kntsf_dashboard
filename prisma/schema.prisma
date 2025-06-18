@@ -36,31 +36,12 @@ model User {
 }
 
 model Role {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
   description String?
   users       User[]
-  permissions RolePermission[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-}
-
-model Permission {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
-  description String?
-  roles       RolePermission[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-}
-
-model RolePermission {
-  role         Role       @relation(fields: [roleId], references: [id])
-  roleId       Int
-  permission   Permission @relation(fields: [permissionId], references: [id])
-  permissionId Int
-
-  @@id([roleId, permissionId])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Student {

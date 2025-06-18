@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import services from "@/lib/services";
 import { SessionUser } from "@/lib/types/common";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import Image from "next/image";
 
 interface DocumentViewClientProps {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
   documentId: string;
 }
 

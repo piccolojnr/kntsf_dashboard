@@ -52,12 +52,12 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import type { AccessPermissions } from "@/lib/permissions";
+import type { AccessRoles } from "@/lib/role";
 import services from "@/lib/services";
 import { useTheme } from "@/hooks/use-theme";
 
 interface ReportsClientProps {
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }
 
 interface StatCard {
@@ -94,7 +94,7 @@ export default function ReportsClient({ permissions }: ReportsClientProps) {
     reportType: string,
     format: "pdf" | "csv" | "excel" = "pdf"
   ) => {
-    if (!permissions.canViewReports) {
+    if (!permissions.isAdmin) {
       toast.error("You don't have permission to download reports");
       return;
     }

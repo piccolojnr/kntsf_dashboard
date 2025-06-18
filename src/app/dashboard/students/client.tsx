@@ -18,13 +18,13 @@ import { MyPagination } from "@/components/common/my-pagination";
 import services from "@/lib/services";
 import { StudentFormValues } from "@/lib/schemas/student-schema";
 import { SessionUser } from "@/lib/types/common";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface StudentsClientProps {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }
 
 export function StudentsClient({ permissions }: StudentsClientProps) {
@@ -58,7 +58,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
 
   const handleSubmit = useCallback(
     async (data: StudentFormValues) => {
-      if (!permissions.canManageStudents) {
+      if (!permissions.isExecutive) {
         toast.error("You don't have permission to manage students");
         return;
       }
@@ -90,12 +90,12 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         setIsSubmitting(false);
       }
     },
-    [selectedStudent, permissions.canManageStudents, queryClient]
+    [selectedStudent, permissions.isExecutive, queryClient]
   );
 
   const handleDelete = useCallback(
     async (studentId: string) => {
-      if (!permissions.canManageStudents) {
+      if (!permissions.isExecutive) {
         toast.error("You don't have permission to manage students");
         return;
       }
@@ -115,11 +115,11 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         toast.error("Failed to delete student");
       }
     },
-    [permissions.canManageStudents, queryClient]
+    [permissions.isExecutive, queryClient]
   );
 
   const handleImport = useCallback(async () => {
-    if (!permissions.canManageStudents) {
+    if (!permissions.isExecutive) {
       toast.error("You don't have permission to manage students");
       return;
     }
@@ -128,7 +128,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
       "import-file"
     ) as HTMLInputElement;
     fileInput?.click();
-  }, [permissions.canManageStudents]);
+  }, [permissions.isExecutive]);
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +162,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
 
   const handleEdit = useCallback(
     (student: any) => {
-      if (!permissions.canManageStudents) {
+      if (!permissions.isExecutive) {
         toast.error("You don't have permission to manage students");
         return;
       }
@@ -170,18 +170,18 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
       setSelectedStudent(student);
       setIsDialogOpen(true);
     },
-    [permissions.canManageStudents]
+    [permissions.isExecutive]
   );
 
   const handleAddStudent = useCallback(() => {
-    if (!permissions.canManageStudents) {
+    if (!permissions.isExecutive) {
       toast.error("You don't have permission to manage students");
       return;
     }
 
     setSelectedStudent(null);
     setIsDialogOpen(true);
-  }, [permissions.canManageStudents]);
+  }, [permissions.isExecutive]);
 
   const handleCreatePermit = useCallback((student: any) => {
     setSelectedStudentForPermit(student);
@@ -207,7 +207,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         onSearchChange={handleSearchChange}
         onAddStudent={handleAddStudent}
         onImport={handleImport}
-        canManageStudents={permissions.canManageStudents}
+        isExecutive={permissions.isExecutive}
       />
 
       <Input
@@ -221,8 +221,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
       <StudentTable
         students={studentsData?.data || []}
         isLoading={isLoading}
-        canManageStudents={permissions.canManageStudents}
-        canCreatePermits={permissions.canCreatePermits}
+        isExecutive={permissions.isExecutive}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onCreatePermit={handleCreatePermit}
@@ -254,9 +253,9 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         </DialogContent>
       </Dialog>
 
-      {permissions.canCreatePermits && (
+      {permissions.isExecutive && (
         <Dialog open={isPermitDialogOpen} onOpenChange={setIsPermitDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Permit</DialogTitle>
               <DialogDescription>

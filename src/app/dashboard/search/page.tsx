@@ -1,10 +1,10 @@
 import { getCurrentUser } from "@/lib/auth/auth";
-import { getPermissions } from "@/lib/permissions";
+import { getRole } from "@/lib/role";
 import { SearchClient } from "./client";
 
 export default async function SearchPage() {
   const user = await getCurrentUser();
-  const permissions = await getPermissions({
+  const permissions = await getRole({
     user,
   });
 

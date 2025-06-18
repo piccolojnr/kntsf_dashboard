@@ -4,169 +4,56 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-    // Create permissions
-    const permissions = [
-        { name: 'manage_users', description: 'Can manage users' },
-        { name: 'manage_roles', description: 'Can manage roles' },
-        { name: 'manage_permissions', description: 'Can manage permissions' },
-        { name: 'manage_permits', description: 'Can manage permits' },
-        { name: 'view_reports', description: 'Can view reports' },
-        { name: 'manage_settings', description: 'Can manage settings' },
-        { name: 'create_permits', description: 'Can create permits' },
-        { name: 'revoke_permits', description: 'Can revoke permits' },
-        { name: 'view_permits', description: 'Can view permits' },
-        { name: 'manage_students', description: 'Can manage students' },
-        { name: 'view_students', description: 'Can view students' },
-        { name: 'export_data', description: 'Can export data' },
-        // news permissions
-        { name: "news:create", description: "Create news articles" },
-        { name: "news:read", description: "Read news articles" },
-        { name: "news:update", description: "Update news articles" },
-        { name: "news:delete", description: "Delete news articles" },
-        // events permissions
-        { name: "events:create", description: "Create events" },
-        { name: "events:read", description: "Read events" },
-        { name: "events:update", description: "Update events" },
-        { name: "events:delete", description: "Delete events" },
-    ];
-
-    console.log('Creating permissions...');
-    for (const permission of permissions) {
-        await prisma.permission.upsert({
-            where: {
-                name: permission.name,
-            },
-            update: {
-                name: permission.name,
-                description: permission.description,
-            },
-            create: permission,
-        });
-    }
-
-    // Create roles
-    const roles = [
-        {
+    console.log('Starting seed...');
+    // Create admin user
+    const adminRole = await prisma.role.upsert({
+        where: { name: 'admin' },
+        update: {
+            description: 'Administrator with full access',
+        },
+        create: {
             name: 'admin',
             description: 'Administrator with full access',
-            permissions: [
-                'manage_users',
-                'manage_roles',
-                'manage_permissions',
-                'manage_permits',
-                'view_reports',
-                'manage_settings',
-                'create_permits',
-                'revoke_permits',
-                'view_permits',
-                'manage_students',
-                'view_students',
-                'export_data',
-                // news permissions
-                'news:create',
-                'news:read',
-                'news:update',
-                'news:delete',
-                // events permissions
-                'events:create',
-                'events:read',
-                'events:update',
-                'events:delete',
-            ],
         },
-        {
-            name: 'pro',
-            description: "Public Relations Officer",
-            permissions: [
-                'create_permits',
-                'view_permits',
-                'view_students',
-                'view_reports',
-                // news permissions
-                'news:create',
-                'news:read',
-                'news:update',
-                'news:delete',
-                // events permissions
-                'events:create',
-                'events:read',
-                'events:update',
-                'events:delete',
-            ],
-        },
-        {
-            name: 'executive',
-            description: 'Executive member with limited access',
-            permissions: [
-                'create_permits',
-                'view_permits',
-                'view_students',
-                'view_reports',
-            ],
-        }
-    ];
-
-    console.log('Creating roles...');
-    for (const role of roles) {
-        const { permissions: rolePermissions, ...roleData } = role;
-        const createdRole = await prisma.role.upsert({
-            where: { name: roleData.name },
-            update: {},
-            create: roleData,
-        });
-
-        // Get all permissions for this role
-        const permissions = await prisma.permission.findMany({
-            where: {
-                name: {
-                    in: rolePermissions,
-                },
-            },
-        });
-
-        // Create role-permission relationships
-        for (const permission of permissions) {
-            await prisma.rolePermission.upsert({
-                where: {
-                    roleId_permissionId: {
-                        roleId: createdRole.id,
-                        permissionId: permission.id,
-                    },
-                },
-                update: {},
-                create: {
-                    roleId: createdRole.id,
-                    permissionId: permission.id,
-                },
-            });
-        }
-    }
-
-    // Create admin user
-    const adminRole = await prisma.role.findUnique({
-        where: { name: 'admin' },
     });
 
     if (!adminRole) {
         throw new Error('Admin role not found');
     }
 
-    const proRole = await prisma.role.findUnique({
+    const proRole = await prisma.role.upsert({
         where: { name: 'pro' },
+        update: {
+            description: "Public Relations Officer",
+        },
+        create: {
+            name: 'pro',
+            description: "Public Relations Officer",
+        },
     });
 
     if (!proRole) {
         throw new Error('Pro role not found');
     }
 
-    // Get the executive role
-    const executiveRole = await prisma.role.findUnique({
+    const executiveRole = await prisma.role.upsert({
         where: { name: 'executive' },
+        update: {
+            description: 'Executive member with limited access',
+        },
+        create: {
+            name: 'executive',
+            description: 'Executive member with limited access',
+        },
     });
 
     if (!executiveRole) {
         throw new Error('Executive role not found');
     }
+
+
+
+
 
     // Create executive users
     const executives: {

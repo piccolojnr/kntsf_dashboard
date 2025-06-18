@@ -5,12 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import services from "@/lib/services";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface SearchClientProps {
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }
 
 export function SearchClient({ permissions }: SearchClientProps) {
@@ -33,7 +33,7 @@ export function SearchClient({ permissions }: SearchClientProps) {
         date: new Date(permit.createdAt).toLocaleDateString(),
       }));
     },
-    enabled: !!query && permissions.canViewPermits,
+    enabled: !!query && permissions.isExecutive,
   });
 
   const { data: studentsData, isLoading: isLoadingStudents } = useQuery({
@@ -52,7 +52,7 @@ export function SearchClient({ permissions }: SearchClientProps) {
         date: new Date(student.createdAt).toLocaleDateString(),
       }));
     },
-    enabled: !!query && permissions.canViewStudents,
+    enabled: !!query && permissions.isExecutive,
   });
 
   const results = [...(permitsData || []), ...(studentsData || [])];
@@ -81,12 +81,12 @@ export function SearchClient({ permissions }: SearchClientProps) {
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
           <TabsTrigger value="all">All ({results.length})</TabsTrigger>
-          {permissions.canViewPermits && (
+          {permissions.isExecutive && (
             <TabsTrigger value="permits">
               Permits ({permits.length})
             </TabsTrigger>
           )}
-          {permissions.canViewStudents && (
+          {permissions.isExecutive && (
             <TabsTrigger value="students">
               Students ({students.length})
             </TabsTrigger>
@@ -134,7 +134,7 @@ export function SearchClient({ permissions }: SearchClientProps) {
           )}
         </TabsContent>
 
-        {permissions.canViewPermits && (
+        {permissions.isExecutive && (
           <TabsContent value="permits" className="space-y-4">
             {isLoading ? (
               <div className="space-y-4">
@@ -173,7 +173,7 @@ export function SearchClient({ permissions }: SearchClientProps) {
           </TabsContent>
         )}
 
-        {permissions.canViewStudents && (
+        {permissions.isExecutive && (
           <TabsContent value="students" className="space-y-4">
             {isLoading ? (
               <div className="space-y-4">

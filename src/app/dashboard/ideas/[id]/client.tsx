@@ -10,17 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import services from "@/lib/services";
 import { SessionUser } from "@/lib/types/common";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 
 interface IdeaViewClientProps {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
   ideaId: string;
 }
 
-export function IdeaViewClient({
-  ideaId,
-}: IdeaViewClientProps) {
+export function IdeaViewClient({ ideaId }: IdeaViewClientProps) {
   const router = useRouter();
 
   const {
@@ -176,4 +174,4 @@ export function IdeaViewClient({
       </div>
     </div>
   );
-} 
+}

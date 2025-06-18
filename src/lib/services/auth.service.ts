@@ -35,15 +35,7 @@ export async function login(credentials: LoginCredentials): Promise<ServiceRespo
     const user = await prisma.user.findUnique({
       where: { username: credentials.username },
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true
       }
     })
 
@@ -62,7 +54,6 @@ export async function login(credentials: LoginCredentials): Promise<ServiceRespo
       {
         userId: user.id,
         role: user.role.name,
-        permissions: user.role.permissions.map((rp: { permission: { name: any } }) => rp.permission.name)
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -95,52 +86,14 @@ export async function verifyToken(token: string): Promise<ServiceResponse<JWT_Re
   }
 }
 
-export async function getUserPermissions(userId: number): Promise<ServiceResponse<string[]>> {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
-      }
-    })
 
-    if (!user) {
-      return { success: false, error: 'User not found' }
-    }
-
-    return {
-      success: true,
-      data: user.role.permissions.map((rp: { permission: { name: any } }) => rp.permission.name)
-    }
-  } catch (error) {
-    log.error('Failed to get user permissions:', error)
-    return handleError(error)
-
-  }
-}
 
 export async function getUserById(userId: number): Promise<ServiceResponse> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true,
       }
     })
 

@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth/auth";
-import { getPermissions } from "@/lib/permissions";
+import { getRole } from "@/lib/role";
 import { IdeaViewClient } from "./client";
 
 export default async function IdeaViewPage({
@@ -9,7 +9,7 @@ export default async function IdeaViewPage({
 }) {
   const resolvedParams = await params;
   const user = await getCurrentUser();
-  const permissions = await getPermissions({
+  const permissions = await getRole({
     user,
   });
 
@@ -20,4 +20,4 @@ export default async function IdeaViewPage({
       ideaId={resolvedParams.id}
     />
   );
-} 
+}

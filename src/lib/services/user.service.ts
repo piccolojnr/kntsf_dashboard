@@ -151,15 +151,7 @@ export async function create(userData: UserData): Promise<ServiceResponse<Author
         index: userCount + 1
       },
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true
       }
     })
     return { success: true, data: user }
@@ -174,15 +166,7 @@ export async function getById(userId: number): Promise<ServiceResponse<Authorize
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true
       }
     })
     if (!user) {
@@ -208,15 +192,7 @@ export async function update(userId: number, userData: Partial<UserData>): Promi
       where: { id: userId },
       data: updatedData,
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true
       },
 
     })
@@ -232,15 +208,7 @@ export async function deleteUser(userId: number): Promise<ServiceResponse<Author
     const user = await prisma.user.delete({
       where: { id: userId },
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true
       }
     })
 
@@ -258,15 +226,7 @@ export async function search(query: string): Promise<ServiceResponse<AuthorizedU
         OR: [{ username: { contains: query } }, { email: { contains: query } }]
       },
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true
       },
       orderBy: [
         { index: 'asc' },
@@ -366,15 +326,7 @@ export async function getAll(): Promise<ServiceResponse<AuthorizedUser[]>> {
   try {
     const users = await prisma.user.findMany({
       include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true
-              }
-            }
-          }
-        }
+        role: true
       },
       orderBy: [
         { index: 'asc' },

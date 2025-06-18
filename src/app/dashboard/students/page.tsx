@@ -1,11 +1,11 @@
 import { getCurrentUser } from "@/lib/auth/auth";
-import { getPermissions } from "@/lib/permissions";
+import { getRole } from "@/lib/role";
 import { StudentsClient } from "./client";
 
 export default async function StudentsPage() {
   const user = await getCurrentUser();
-  const permissions = await getPermissions({
-  user,
+  const permissions = await getRole({
+    user,
   });
 
   return <StudentsClient user={user} permissions={permissions} />;

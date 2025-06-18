@@ -1,4 +1,4 @@
-import { Permission, Permit, Role, Student, User } from "@prisma/client"
+import { Permit, Role, Student, User } from "@prisma/client"
 
 export interface ServiceResponse<T = unknown> {
     success: boolean
@@ -29,11 +29,7 @@ export type SessionUser = {
 }
 
 export type AuthorizedUser = User & {
-    role: Role & {
-        permissions: {
-            permission: Permission;
-        }[];
-    };
+    role: Role
 };
 
 
@@ -60,7 +56,5 @@ export interface RoleWithPermissions extends Role {
     description: string | null;
     createdAt: Date;
     updatedAt: Date;
-    permissions: {
-        permission: Permission;
-    }[];
+
 }

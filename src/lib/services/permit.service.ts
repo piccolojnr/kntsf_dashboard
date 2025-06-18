@@ -13,6 +13,8 @@ import { handleError } from '../utils'
 export interface PermitData {
   studentId: string
   paymentId?: number
+  amountPaid?: number
+  expiryDate?: Date
 }
 
 export interface PaginatedResponse<T> {
@@ -101,10 +103,6 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
   try {
     const session = await getSession()
 
-    // if (!session || !session.user) {
-    //   return { success: false, error: 'Unauthorized' }
-    // }
-
     // check student id
     const student = await prisma.student.findUnique({
       where: { studentId: permitData.studentId }
@@ -136,8 +134,8 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
         permitCode: hashedCode,
         originalCode: permitCode,
         payment: permitData.paymentId ? { connect: { id: permitData.paymentId } } : undefined,
-        expiryDate: config.permitConfig?.expirationDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        amountPaid: config.permitConfig?.defaultAmount || 100,
+        expiryDate: config.permitConfig?.expirationDate || permitData.expiryDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        amountPaid: config.permitConfig?.defaultAmount || permitData.amountPaid || 100,
         studentId: student.id,
         issuedById: session ? parseInt((session.user as any).id) : null,
         status: 'active'

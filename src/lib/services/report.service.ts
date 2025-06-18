@@ -899,7 +899,6 @@ async function generateComplianceAudit(options: ReportOptions): Promise<ReportRe
         const [
             auditTrail,
             userActivity,
-            permissionUsage,
             securityEvents,
             dataIntegrity,
             regulatoryCompliance,
@@ -936,20 +935,6 @@ async function generateComplianceAudit(options: ReportOptions): Promise<ReportRe
                 },
             }),
 
-            // Permission usage tracking
-            prisma.user.findMany({
-                include: {
-                    role: {
-                        include: {
-                            permissions: {
-                                include: {
-                                    permission: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            }),
 
             // Security events (mock - you'd need security logging)
             Promise.resolve([
@@ -1016,12 +1001,7 @@ async function generateComplianceAudit(options: ReportOptions): Promise<ReportRe
                 },
             },
             securityEvents,
-            permissionUsage: permissionUsage.map((user) => ({
-                userId: user.id,
-                username: user.username,
-                role: user.role.name,
-                permissions: user.role.permissions.map((p) => p.permission.name),
-            })),
+
             dataIntegrity: {
                 orphanedPermits: dataIntegrity[0],
                 studentsWithoutPermits: dataIntegrity[1],
@@ -1046,7 +1026,6 @@ async function generateComplianceAudit(options: ReportOptions): Promise<ReportRe
                         issue: key,
                         count: value,
                     })),
-                    "Permission Usage": complianceData.permissionUsage,
                     "User Activity": userActivity.map((u) => ({ userId: u.userId, actions: u._count.id })),
                     "Access Patterns": accessPatterns,
                     "Recent Audit Trail": auditTrail.slice(0, 100).map((a) => ({

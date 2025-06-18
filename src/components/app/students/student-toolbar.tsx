@@ -9,7 +9,7 @@ interface StudentToolbarProps {
   onSearchChange: (query: string) => void;
   onAddStudent: () => void;
   onImport: () => void;
-  canManageStudents: boolean;
+  isExecutive: boolean;
 }
 
 export function StudentToolbar({
@@ -17,7 +17,7 @@ export function StudentToolbar({
   onSearchChange,
   onAddStudent,
   onImport,
-  canManageStudents,
+  isExecutive,
 }: StudentToolbarProps) {
   return (
     <div className="flex items-center justify-between">
@@ -32,7 +32,7 @@ export function StudentToolbar({
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
-        {canManageStudents && (
+        {isExecutive && (
           <>
             <Button onClick={onAddStudent}>
               <Plus className="w-4 h-4 mr-2" />

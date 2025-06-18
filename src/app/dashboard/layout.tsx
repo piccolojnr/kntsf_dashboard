@@ -1,6 +1,6 @@
 import { BaseLayout } from "@/components/layouts/base-layout";
 import { getCurrentUser } from "@/lib/auth/auth";
-import { getPermissions } from "@/lib/permissions";
+import { getRole } from "@/lib/role";
 
 export default async function DashboardLayout({
   children,
@@ -8,7 +8,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }>) {
   const user = await getCurrentUser();
-  const permissions = await getPermissions({
+  const permissions = await getRole({
     user: user,
   });
 

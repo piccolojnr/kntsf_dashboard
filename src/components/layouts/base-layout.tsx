@@ -18,7 +18,7 @@ import { BackToTop } from "./back-to-top";
 import { SystemStatus } from "./system-status";
 import { usePathname } from "next/navigation";
 import { SessionUser } from "@/lib/types/common";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 
 export const BaseLayout = ({
   children,
@@ -27,7 +27,7 @@ export const BaseLayout = ({
 }: {
   children: React.ReactNode;
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }) => {
   const pathname = usePathname();
   const endpoints = pathname.split("/").filter(Boolean);

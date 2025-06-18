@@ -27,7 +27,7 @@ import {
 import { cn } from "../../lib/utils";
 import { useRouter } from "next/navigation";
 import { SessionUser } from "@/lib/types/common";
-import { AccessPermissions } from "@/lib/permissions";
+import { AccessRoles } from "@/lib/role";
 import Image from "next/image";
 export function AppSidebar({
   user,
@@ -35,7 +35,7 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: SessionUser;
-  permissions: AccessPermissions;
+  permissions: AccessRoles;
 }) {
   const { open, openMobile, toggleSidebar } = useSidebar();
   const router = useRouter();
@@ -65,72 +65,69 @@ export function AppSidebar({
         title: "News",
         url: "/dashboard/news",
         icon: Newspaper,
-        show: () => permissions.canManageNews, // Always show for logged-in users
+        show: () => permissions.isPro, // Always show for logged-in users
       },
       {
         title: "Events",
         url: "/dashboard/events",
         icon: Calendar,
-        show: () => permissions.canManageEvents,
+        show: () => permissions.isPro,
       },
       {
         title: "Newsletters",
         url: "/dashboard/newsletters",
         icon: Mail,
-        show: () => permissions.canManageEvents,
+        show: () => permissions.isPro,
       },
       {
         title: "Ideas",
         url: "/dashboard/ideas",
         icon: Brain,
-        show: () => permissions.canManageEvents,
+        show: () => permissions.isExecutive,
       },
       {
         title: "Documents",
         url: "/dashboard/documents",
         icon: Package,
-        show: () => permissions.canManageEvents,
+        show: () => permissions.isExecutive,
       },
       {
         title: "Permits",
         url: "/dashboard/permits",
         icon: FileCheck,
-        show: () => permissions.canViewPermits,
+        show: () => permissions.isExecutive,
       },
       {
         title: "Students",
         url: "/dashboard/students",
         icon: Users,
-        show: () => permissions.canViewStudents,
+        show: () => permissions.isExecutive,
       },
       {
         title: "Administration",
         url: "/dashboard/admin",
         icon: Shield,
-        show: () =>
-          permissions.canManageUsers ||
-          permissions.canManageRoles ||
-          permissions.canManagePermissions,
+        show: () => permissions.isAdmin,
         items: [
           {
             title: "Users",
             url: "/dashboard/admin/users",
-            show: () => permissions.canManageUsers,
+            show: () => permissions.isAdmin,
+          },
+          {
+            title: "Payments",
+            url: "/dashboard/admin/payments",
+            show: () => permissions.isAdmin,
           },
           {
             title: "Roles",
             url: "/dashboard/admin/roles",
-            show: () => permissions.canManageRoles,
-          },
-          {
-            title: "Permissions",
-            url: "/dashboard/admin/permissions",
-            show: () => permissions.canManagePermissions,
+            show: () => permissions.isAdmin,
           },
           {
             title: "Settings",
             url: "/dashboard/admin/settings",
-            show: () => permissions.canManageSettings,
+            show: () => permissions.isAdmin,
           },
         ],
       },
@@ -138,12 +135,12 @@ export function AppSidebar({
         title: "Settings",
         url: "/dashboard/settings",
         icon: Settings2,
-        show: () => permissions.canViewReports,
+        show: () => permissions.isAdmin,
         items: [
           {
             title: "Reports",
             url: "/dashboard/settings/reports",
-            show: () => permissions.canViewReports,
+            show: () => permissions.isAdmin,
           },
         ],
       },

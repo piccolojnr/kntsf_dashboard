@@ -33,15 +33,11 @@ const Courses = [
   "BSc. Accounting",
   "BSc. Nursing",
   "BSc. Pharmacy",
+  "BSc. Communication & Media Studies",
+  "BSc. Economics",
 ];
 
-const Levels = [
-  "Level 100",
-  "Level 200",
-  "Level 300",
-  "Level 400",
-  "Level 500",
-];
+const Levels = ["Level 100", "Level 200", "Level 300", "Level 400"];
 
 interface StudentFormProps {
   student: Student | null;

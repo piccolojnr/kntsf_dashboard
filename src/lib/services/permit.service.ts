@@ -151,7 +151,7 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
     })
 
     // Generate QR Code
-    const verificationUrl = `${BASE_URL}/verify?code=${permitCode}`
+    const verificationUrl = `${BASE_URL}/permits/verify?code=${permitCode}`
     const qrCode = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(verificationUrl)}&size=200x200`
 
     const res = await services.email.sendPermitEmails({

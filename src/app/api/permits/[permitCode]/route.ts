@@ -34,7 +34,7 @@ export async function GET(
             success: true,
             data: permit,
             permitCode,
-            qrCode: `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`${BASE_URL}/verify?code=${permitCode}`)}&size=200x200`,
+            qrCode: `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`${BASE_URL}/permits/verify?code=${permitCode}`)}&size=200x200`,
         })
     } catch (error) {
         console.error('Error fetching permit:', error)

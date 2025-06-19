@@ -58,6 +58,7 @@ model Student {
   updatedAt   DateTime      @updatedAt
   deletedAt   DateTime? // Soft delete
   StudentIdea StudentIdea[]
+  GameScore   GameScore[]
 }
 
 model Permit {
@@ -279,4 +280,42 @@ enum IdeaStatus {
   APPROVED
   REJECTED
   IMPLEMENTED
+}
+
+// GAME TABLES
+
+model Game {
+  id          Int         @id @default(autoincrement())
+  gameKey     String      @unique
+  name        String
+  description String?     @db.Text
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  GameScore   GameScore[]
+}
+
+model GameScore {
+  id         Int        @id @default(autoincrement())
+  studentId  Int
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gameId     Int
+  game       Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  difficulty Difficulty @default(MEDIUM)
+  score      Int
+  timeTaken  Int // Time taken in seconds
+  movesCount Int
+  gameData   Json? // Additional game data (e.g., moves, time taken)
+  playedAt   DateTime   @default(now())
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([studentId, gameId], name: "idx_student_game")
+  @@index([gameId, difficulty, score, timeTaken], name: "idx_leaderboard")
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
 }

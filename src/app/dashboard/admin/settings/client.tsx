@@ -12,6 +12,7 @@ import { SemesterSettings } from "@/components/app/settings/sections/semester-se
 import { PermitSettings } from "@/components/app/settings/sections/permit-settings";
 import { AccessRoles } from "@/lib/role";
 import { SessionUser } from "@/lib/types/common";
+import { AppInfoSettings } from "@/components/app/settings/sections/app-info-settings";
 
 interface SettingsClientProps {
   user: SessionUser;
@@ -63,6 +64,7 @@ export function SettingsClient({}: SettingsClientProps) {
           <TabsTrigger value="contact">Contact Info</TabsTrigger>
           <TabsTrigger value="semester">Semester</TabsTrigger>
           <TabsTrigger value="permit">Permit Settings</TabsTrigger>
+          <TabsTrigger value="appinfo">App Info & Logins</TabsTrigger>
         </TabsList>
         <TabsContent value="contact">
           <Card>
@@ -101,6 +103,16 @@ export function SettingsClient({}: SettingsClientProps) {
                 permitConfig={config.permitConfig}
                 onUpdate={handleConfigUpdate}
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="appinfo">
+          <Card>
+            <CardHeader>
+              <CardTitle>App Information & Logins</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AppInfoSettings />
             </CardContent>
           </Card>
         </TabsContent>

@@ -8,6 +8,7 @@ import { generateReceiptEmailTemplate } from '../email/templates-views/receipt-e
 import { generateRevokedPermitEmailTemplate } from '../email/templates-views/revoked-permit-email-template'
 import { render } from '@react-email/components'
 import { handleError } from '../utils'
+import { generateContactEmailTemplate } from '../email/templates-views/contact-email-template'
 // Create a transporter using Gmail
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.zoho.com",
@@ -134,5 +135,20 @@ export async function sendRevokedPermitEmail(
     log.error('Error sending revoked permit email:', error)
     return handleError(error)
 
+  }
+}
+
+export async function sendContactEmail({ name, email, subject, message }: { name: string, email: string, subject: string, message: string }): Promise<ServiceResponse> {
+  try {
+    const contactEmail = generateContactEmailTemplate({ name, email, subject, message })
+    await sendEmail({
+      to: process.env.CONTACT_FORM_RECEIVER || 'admin@knutsfordsrc.com',
+      subject: `Contact Form Submission: ${subject}`,
+      template: contactEmail,
+    })
+    return { success: true }
+  } catch (error) {
+    log.error('Error sending contact form email:', error)
+    return handleError(error)
   }
 }

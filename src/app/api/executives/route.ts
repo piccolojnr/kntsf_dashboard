@@ -6,27 +6,54 @@ export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams
         const category = searchParams.get("category")
+        const page = searchParams.get("page")
+        const pageSize = searchParams.get("pageSize")
 
         const where: Prisma.UserWhereInput = {
             ...(category && { category }),
             published: true,
         }
 
-        const executives = await prisma.user.findMany({
-            where,
-            select: {
-                id: true,
-                name: true,
-                image: true,
-                position: true,
-                positionDescription: true,
-                biography: true,
-                socialLinks: true,
-                category: true,
-                email: true,
-            },
-            orderBy: [{ index: "asc" }, { name: "asc" }],
-        })
+        let executives, total
+        if (page && pageSize) {
+            const pageNum = Math.max(1, parseInt(page, 10) || 1)
+            const sizeNum = Math.max(1, parseInt(pageSize, 10) || 10)
+            total = await prisma.user.count({ where })
+            executives = await prisma.user.findMany({
+                where,
+                select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                    position: true,
+                    positionDescription: true,
+                    biography: true,
+                    socialLinks: true,
+                    category: true,
+                    email: true,
+                },
+                orderBy: [{ index: "asc" }, { name: "asc" }],
+                skip: (pageNum - 1) * sizeNum,
+                take: sizeNum,
+            })
+        } else {
+            executives = await prisma.user.findMany({
+                where,
+                select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                    position: true,
+                    positionDescription: true,
+                    biography: true,
+                    socialLinks: true,
+                    category: true,
+                    email: true,
+                },
+                orderBy: [{ index: "asc" }, { name: "asc" }],
+            })
+            total = executives.length
+        }
 
         // Transform the data to match our Executive interface
         const transformedExecutives = executives.map((exec) => ({
@@ -44,7 +71,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: transformedExecutives,
-            total: transformedExecutives.length,
+            total,
         })
     } catch (error: any) {
         console.error("Error fetching executives:", error)

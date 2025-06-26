@@ -1,3 +1,4 @@
+import { BASE_EMAIL, BASE_URL } from "@/lib/constants";
 import {
   Body,
   Container,
@@ -171,9 +172,9 @@ export const generateReceiptEmailTemplate = ({
                 <br />
                 Student Representative Council
                 <br />
-                📧 knutsforduniversitysrc@gmail.com
+                📧 {BASE_EMAIL}
                 <br />
-                🌐 www.knutsforduniversity.edu.gh
+                🌐 {BASE_URL}
               </Text>
               <Text style={footerDisclaimer}>
                 This is an automated receipt. Please do not reply to this

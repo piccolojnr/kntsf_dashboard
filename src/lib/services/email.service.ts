@@ -1,5 +1,6 @@
 'use server'
 import nodemailer from 'nodemailer'
+import SMTPTransport from 'nodemailer/lib/smtp-transport'
 import { log } from '../logger'
 import { ServiceResponse } from '../types/common'
 import { generatePermitEmailTemplate } from '../email/templates-views/permit-email-template'
@@ -7,18 +8,19 @@ import { generateReceiptEmailTemplate } from '../email/templates-views/receipt-e
 import { generateRevokedPermitEmailTemplate } from '../email/templates-views/revoked-permit-email-template'
 import { render } from '@react-email/components'
 import { handleError } from '../utils'
-
 // Create a transporter using Gmail
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.SMTP_HOST || "smtp.zoho.com",
+  port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465,
+  secure: true,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    user: process.env.SMTP_USER || "admin@knutsfordsrc.com",
+    pass: process.env.SMTP_PASS || "VfLXcDCtKHHT"
   },
   tls: {
     rejectUnauthorized: false
   }
-})
+} as SMTPTransport.Options)
 
 export interface EmailOptions {
   to: string
@@ -58,7 +60,7 @@ export async function sendEmail(options: EmailOptions): Promise<ServiceResponse>
     const mailOptions = {
       from: {
         name: 'Knutsford University SRC',
-        address: process.env.EMAIL_USER || 'knutsforduniversitysrc@gmail.com'
+        address: process.env.SMTP_FROM_ADDRESS || 'admin@knutsfordsrc.com'
       },
       ...options,
       html: emailHtml,

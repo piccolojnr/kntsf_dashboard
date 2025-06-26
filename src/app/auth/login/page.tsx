@@ -47,8 +47,6 @@ export default function Login() {
       if (result?.ok) {
         toast.dismiss();
         toast.success("Login successful!");
-        // Add a small delay to ensure the success message is shown
-        await new Promise((resolve) => setTimeout(resolve, 500));
         router.push("/dashboard");
       } else {
         toast.dismiss();

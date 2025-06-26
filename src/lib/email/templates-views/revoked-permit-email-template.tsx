@@ -1,3 +1,4 @@
+import { BASE_EMAIL, BASE_URL } from "@/lib/constants";
 import {
   Body,
   Container,
@@ -154,7 +155,7 @@ export const generateRevokedPermitEmailTemplate = ({
                   questions, please contact the SRC office immediately:
                 </Text>
                 <Text style={contactDetails}>
-                  📧 Email: knutsforduniversitysrc@gmail.com
+                  📧 Email: {BASE_EMAIL}
                   <br />
                   🏢 Office: SRC Building, Ground Floor
                   <br />⏰ Hours: Monday - Friday, 8:00 AM - 5:00 PM
@@ -170,9 +171,9 @@ export const generateRevokedPermitEmailTemplate = ({
                 <br />
                 Student Representative Council
                 <br />
-                📧 knutsforduniversitysrc@gmail.com
+                📧 {BASE_EMAIL}
                 <br />
-                🌐 www.knutsforduniversity.edu.gh
+                🌐 {BASE_URL}
               </Text>
               <Text style={footerDisclaimer}>
                 This is an official notice. Please take immediate action as

@@ -48,6 +48,21 @@ export function AppInfoSettings() {
       password: "knutsford112233",
       category: "development",
     },
+    {
+      id: 5,
+      service: "Paystack",
+      url: "https://dashboard.paystack.com",
+      username: "kntsf",
+      password: "Knutsford112233@",
+      category: "other",
+    },
+    {
+      id: 6,
+      service: "Zoho Mail",
+      url: "https://mail.zoho.com",
+      username: "kntsf",
+      password: "Knutsford112233@",
+    },
   ]);
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -206,7 +221,7 @@ export function AppInfoSettings() {
                   {entry.service}
                 </h5>
                 <span
-                  className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(entry.category)}`}
+                  className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(entry.category ?? "other")}`}
                 >
                   {entry.category}
                 </span>

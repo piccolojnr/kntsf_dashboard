@@ -81,7 +81,7 @@ async function main() {
                 "biography": "Focused on enhancing student engagement and academic excellence.",
                 "category": "main_executive",
                 "roleId": executiveRole.id,
-                "published": true
+                "published": false
             },
             {
                 "name": "Osei Ampratwum Alberta",

@@ -58,7 +58,7 @@ model Student {
   updatedAt   DateTime      @updatedAt
   deletedAt   DateTime? // Soft delete
   StudentIdea StudentIdea[]
-  GameScore   GameScore[]
+  GameUser    GameUser?
 }
 
 model Permit {
@@ -282,40 +282,46 @@ enum IdeaStatus {
   IMPLEMENTED
 }
 
-// GAME TABLES
+model GameUser {
+  id                 String              @id @default(uuid())
+  username           String              @unique
+  avatarUrl          String?             @db.VarChar(255)
+  password           String              @db.VarChar(255)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  studentId          Int                 @unique
+  student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  leaderboardEntries LeaderboardEntry[]
+  leaderboardPeriods LeaderboardPeriod[]
 
-model Game {
-  id          Int         @id @default(autoincrement())
-  gameKey     String      @unique
-  name        String
-  description String?     @db.Text
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  GameScore   GameScore[]
+  @@index([username])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
-model GameScore {
-  id         Int        @id @default(autoincrement())
-  studentId  Int
-  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gameId     Int
-  game       Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  difficulty Difficulty @default(MEDIUM)
-  score      Int
-  timeTaken  Int // Time taken in seconds
-  movesCount Int
-  gameData   Json? // Additional game data (e.g., moves, time taken)
-  playedAt   DateTime   @default(now())
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+model LeaderboardPeriod {
+  id        String             @id @default(uuid())
+  startDate DateTime
+  endDate   DateTime
+  winnerId  String? // optional until calculated
+  winner    GameUser?          @relation(fields: [winnerId], references: [id])
+  entries   LeaderboardEntry[]
 
-  @@index([studentId, gameId], name: "idx_student_game")
-  @@index([gameId, difficulty, score, timeTaken], name: "idx_leaderboard")
+  @@unique([startDate, endDate]) // no overlapping periods for a game
 }
 
-enum Difficulty {
-  EASY
-  MEDIUM
-  HARD
+model LeaderboardEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  periodId    String
+  totalScore  Int
+  gamesPlayed Int
+  avgScore    Int
+  playerName  String
+  createdAt   DateTime @default(now())
+
+  user   GameUser          @relation(fields: [userId], references: [id])
+  period LeaderboardPeriod @relation(fields: [periodId], references: [id])
+
+  @@unique([userId, periodId]) // one entry per user per period
 }

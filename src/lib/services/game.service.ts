@@ -4,17 +4,15 @@ import { compare, hash } from "bcryptjs";
 import prisma from "../prisma/client";
 import cloudinary from '@/lib/cloudinary';
 import { getCurrentWeekEnd, getCurrentWeekStart } from "../weekly-leaderboard";
+import { GameUser } from "@prisma/client";
 
 
 
-export interface User {
-    id: string;
-    username: string;
-    isGuest: boolean;
-}
+
 
 export interface WeeklyLeaderboardEntry {
     userId: string;
+    user: GameUser;
     playerName: string;
     totalScore: number;
     gamesPlayed: number;
@@ -36,7 +34,7 @@ export async function loginUser(username: string, password: string) {
     if (!isValid) {
         return { error: "Invalid password" };
     }
-    return { data: { id: user.id, username: user.username, isGuest: false } };
+    return { data: { ...user, isGuest: false } };
 }
 
 export async function registerUser(username: string, password: string, studentId: string, imageFile?: File) {
@@ -49,10 +47,19 @@ export async function registerUser(username: string, password: string, studentId
     if (!student) {
         return { error: "Only students can register. Invalid student ID." };
     }
+
+
     const existing = await prisma.gameUser.findUnique({ where: { username } });
     if (existing) {
-        return { error: "User already exists" };
+        return { error: "username already exists" };
     }
+
+    // check if the student already has a game user
+    const existingUser = await prisma.gameUser.findFirst({ where: { studentId: student.id } });
+    if (existingUser) {
+        return { error: "Student already has a game user account" };
+    }
+
     const hashedPassword = await hash(password, 10);
     let avatarUrl: string | undefined = undefined;
     if (imageFile) {
@@ -82,7 +89,7 @@ export async function registerUser(username: string, password: string, studentId
     const user = await prisma.gameUser.create({
         data: { username, password: hashedPassword, studentId: student.id, avatarUrl },
     });
-    return { data: { id: user.id, username: user.username, isGuest: false, avatarUrl: user.avatarUrl } };
+    return { data: { ...user, isGuest: false, } };
 }
 
 export async function updateUser(userId: string, updates: { username?: string; password?: string; imageFile?: File }) {
@@ -121,7 +128,7 @@ export async function updateUser(userId: string, updates: { username?: string; p
         data.avatarUrl = uploadResult.secure_url;
     }
     const updatedUser = await prisma.gameUser.update({ where: { id: userId }, data });
-    return { data: { id: updatedUser.id, username: updatedUser.username, avatarUrl: updatedUser.avatarUrl } };
+    return { data: { ...updatedUser, avatarUrl: updatedUser.avatarUrl } };
 }
 
 // Utility: Get or create the current leaderboard period for a game
@@ -155,6 +162,7 @@ export async function getCurrentWeeklyLeaderboard(currentUserId?: string, option
     const leaderboard = entries.map(entry => ({
         userId: entry.userId,
         playerName: entry.playerName,
+        user: entry.user,
         totalScore: entry.totalScore,
         gamesPlayed: entry.gamesPlayed,
         avgScore: entry.avgScore,
@@ -182,6 +190,7 @@ export async function getHistoricalWeeklyLeaderboard(weekStart: Date, options?: 
     });
     return entries.map(entry => ({
         userId: entry.userId,
+        user: entry.user,
         playerName: entry.playerName,
         totalScore: entry.totalScore,
         gamesPlayed: entry.gamesPlayed,
@@ -225,4 +234,23 @@ export async function getPlayerWeeklyRank(userId: string): Promise<number | null
     const leaderboard = await getCurrentWeeklyLeaderboard();
     const playerIndex = leaderboard.findIndex(entry => entry.userId === userId);
     return playerIndex >= 0 ? playerIndex + 1 : null;
+}
+
+// get winner of the previous week
+export async function getPreviousWeekWinner(): Promise<WeeklyLeaderboardEntry | null> {
+    const lastWeekStart = getCurrentWeekStart(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const lastWeekEnd = getCurrentWeekEnd(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const period = await prisma.leaderboardPeriod.findFirst({
+        where: {
+            startDate: lastWeekStart,
+            endDate: lastWeekEnd,
+        },
+    });
+    if (!period) return null;
+    const winner = await prisma.leaderboardEntry.findFirst({
+        where: { periodId: period.id },
+        orderBy: { totalScore: 'desc' },
+        include: { user: true },
+    });
+    return winner || null;
 }

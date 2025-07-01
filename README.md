@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Permit Management System
 
-## Getting Started
+Welcome to the Permit Management System – a modern web application designed to
+streamline the process of creating, tracking, and managing permits for students,
+staff, and administrators.
 
-First, run the development server:
+## What is this app?
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This system helps organizations efficiently handle permit requests, approvals,
+and renewals. It also provides tools for managing students, events, news,
+newsletters, and more, all in one place.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Key Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Secure Management:** Advanced authentication and authorization to keep your
+  data safe.
+- **Real-time Tracking:** Instantly see the status of permits, expiration dates,
+  and receive renewal notifications.
+- **Easy Verification:** Quickly verify permits to reduce administrative
+  overhead.
+- **Student Management:** Add, update, and manage student records.
+- **Document Management:** Upload, preview, and manage important documents.
+- **Event Management:** Create, edit, and promote events.
+- **News & Announcements:** Publish news articles and updates.
+- **Newsletter System:** Manage subscribers, send newsletters, and track
+  engagement.
+- **Payments:** Integrated payment processing for permit fees.
+- **Admin Dashboard:** Powerful tools for administrators to manage users, roles,
+  settings, and reports.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How to Get Started
 
-## Learn More
+1. **Clone the repository** and install dependencies:
+   ```bash
+   npm install
+   ```
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To learn more about Next.js, take a look at the following resources:
+> For more details on configuration, database setup, and deployment, see the
+> documentation in the `docs/` folder.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **src/app/** – Main application pages and API routes.
+- **src/components/** – Reusable UI components and feature modules.
+- **src/lib/** – Utilities, services, and backend integrations.
+- **prisma/** – Database schema and migration files.
+- **docs/** – Additional documentation.
 
-## Deploy on Vercel
+## Technologies Used
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Next.js** – Modern React framework for web apps.
+- **Prisma** – Type-safe database ORM (MySQL).
+- **Tailwind CSS** – Utility-first CSS framework.
+- **Paystack** – Payment integration.
+- **Cloudinary** – Image and file management.
+- **Other:** Modern authentication, role-based access, and more.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Support & Contact
+
+For questions, support, or to contribute, please open an issue or contact the
+project maintainers.

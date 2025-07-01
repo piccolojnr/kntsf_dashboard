@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE `Config` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `appName` VARCHAR(191) NOT NULL DEFAULT 'KNUST SRC Permit System',
+    `appName` VARCHAR(191) NOT NULL DEFAULT 'KNUTSFORD SRC Permit System',
     `appDescription` TEXT NULL,
     `appLogo` VARCHAR(191) NULL,
     `appFavicon` VARCHAR(191) NULL,

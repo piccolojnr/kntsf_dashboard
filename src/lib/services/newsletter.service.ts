@@ -320,7 +320,7 @@ export async function sendNewsletter(id: number): Promise<ServiceResponse<{ mess
         // Send email to each subscriber
         for (const subscriber of subscribers) {
             const emailTemplate = NewsletterBase({
-                previewText: 'Latest newsletter from KNUST SRC',
+                previewText: 'Latest newsletter from KNUTSFORD SRC',
                 unsubscribeUrl: `${process.env.NEXT_PUBLIC_APP_URL}/newsletter/unsubscribe?email=${subscriber.email}`,
                 title: newsletter.title,
                 content: newsletter.content

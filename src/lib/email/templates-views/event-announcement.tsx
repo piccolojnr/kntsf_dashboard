@@ -34,7 +34,7 @@ export const EventAnnouncement = ({
   eventDescription,
   eventImageUrl = "/placeholder.svg?height=300&width=600",
   registrationUrl = "#",
-  organizationName = "KNUST SRC",
+  organizationName = "KNUTSFORD SRC",
   logoUrl = "/placeholder.svg?height=60&width=200",
   unsubscribeUrl = "#",
 }: EventAnnouncementProps) => {

@@ -39,7 +39,7 @@ export function NewsletterTemplates() {
         title: "Weekly Update #45",
         content:
           "This is a sample newsletter content. You can customize this with your own content, including multiple paragraphs, links, and formatting.\n\nThis template is perfect for regular updates and announcements to your subscribers.",
-        previewText: "Weekly update from KNUST SRC",
+        previewText: "Weekly update from KNUTSFORD SRC",
       },
     },
     {
@@ -54,7 +54,7 @@ export function NewsletterTemplates() {
         eventTitle: "Annual Tech Conference 2024",
         eventDate: "March 15, 2024",
         eventTime: "9:00 AM - 5:00 PM",
-        eventLocation: "KNUST Great Hall",
+        eventLocation: "KNUTSFORD Great Hall",
         eventDescription:
           "Join us for an exciting day of technology talks, networking, and innovation. This year's conference features industry leaders, student presentations, and hands-on workshops.",
         registrationUrl: "#",
@@ -70,7 +70,7 @@ export function NewsletterTemplates() {
       popular: true,
       sampleData: {
         firstName: "John",
-        organizationName: "KNUST SRC",
+        organizationName: "KNUTSFORD SRC",
         websiteUrl: "#",
       },
     },

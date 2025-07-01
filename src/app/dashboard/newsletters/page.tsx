@@ -8,17 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function NewsletterPage() {
-  return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Newsletter Management</h1>
-          <p className="text-muted-foreground">
-            Manage newsletters, subscribers, and analytics
-          </p>
-        </div>
-      </div>
-      <NewsletterDashboard />
-    </div>
-  );
+  return <NewsletterDashboard />;
 }

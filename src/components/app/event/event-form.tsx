@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { ControllerRenderProps, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from "date-fns";
+import { RichTextField } from "@/components/form/fields/rich-text-field";
 
 const CATEGORIES = [
   { value: "academic", label: "Academic" },
@@ -213,10 +214,9 @@ export function EventForm({ initialData }: EventFormProps) {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Write your event description here..."
-                          className="min-h-[400px]"
-                          {...field}
+                        <RichTextField
+                          name="description"
+                          field={field as ControllerRenderProps<any, string>}
                         />
                       </FormControl>
                       <FormDescription>

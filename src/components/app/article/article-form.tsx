@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { ControllerRenderProps, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RichTextField } from "@/components/form/fields/rich-text-field";
 
 const CATEGORIES = [
   { value: "news", label: "News" },
@@ -45,7 +46,17 @@ const articleSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(200, "Title must be less than 200 characters"),
-  content: z.string().min(1, "Content is required"),
+  content: z
+    .string()
+    .min(10, "Content is too short")
+    .refine((val) => {
+      try {
+        const parsed = JSON.parse(val);
+        return parsed?.root;
+      } catch {
+        return false;
+      }
+    }, "Invalid editor content"),
   excerpt: z
     .string()
     .min(1, "Excerpt is required")
@@ -202,10 +213,9 @@ export function ArticleForm({ initialData }: ArticleFormProps) {
                     <FormItem>
                       <FormLabel>Content</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Write your article content here..."
-                          className="min-h-[400px]"
-                          {...field}
+                        <RichTextField
+                          name="content"
+                          field={field as ControllerRenderProps<any, string>}
                         />
                       </FormControl>
                       <FormDescription>

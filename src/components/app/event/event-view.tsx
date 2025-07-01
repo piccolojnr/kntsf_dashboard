@@ -7,6 +7,7 @@ import { ArrowLeft, Edit, Calendar, MapPin, Users } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { format } from "date-fns";
+import { getHtmlFromString } from "@/components/form/fields/initial-value";
 
 interface EventViewProps {
   event: {
@@ -36,6 +37,7 @@ interface EventViewProps {
 }
 
 export function EventView({ event }: EventViewProps) {
+  const html = getHtmlFromString(event.description);
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -142,7 +144,10 @@ export function EventView({ event }: EventViewProps) {
               {/* Event Description */}
               <div className="prose prose-lg max-w-none">
                 <div className="whitespace-pre-wrap leading-relaxed">
-                  {event.description}
+                  <div
+                    className="prose"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                  />
                 </div>
               </div>
             </CardContent>

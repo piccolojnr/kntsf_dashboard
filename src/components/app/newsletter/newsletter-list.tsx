@@ -32,6 +32,7 @@ import {
   MoreHorizontal,
   Send,
   Trash2,
+  RefreshCcw,
   Copy,
   Eye,
   Calendar,
@@ -50,6 +51,7 @@ export function NewsletterList() {
     data: newsletters,
     isLoading: isLoadingNewsletters,
     refetch,
+    isRefetching,
   } = useQuery({
     queryKey: ["newsletters"],
     queryFn: async () => {
@@ -256,11 +258,22 @@ export function NewsletterList() {
           </div>
 
           <Tabs defaultValue="grid" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="grid">Grid View</TabsTrigger>
-              <TabsTrigger value="list">List View</TabsTrigger>
-            </TabsList>
-
+            <div className="flex items-center justify-between mb-4">
+              <TabsList>
+                <TabsTrigger value="grid">Grid View</TabsTrigger>
+                <TabsTrigger value="list">List View</TabsTrigger>
+              </TabsList>
+              <Button
+                onClick={() => refetch()}
+                disabled={isRefetching}
+                className="btn btn-primary"
+              >
+                <RefreshCcw
+                  className={`mr-2 h-4 w-4 ${isRefetching} ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+            </div>
             <TabsContent value="grid">
               {isLoadingNewsletters ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

@@ -214,7 +214,7 @@ export async function createNewsletter(data: NewsletterData): Promise<ServiceRes
             data: {
                 title: data.title,
                 content: data.content,
-                status: data.status || 'DRAFT',
+                status: 'DRAFT',
                 sentBy: {
                     connect: { id: parseInt(id, 10) } // Ensure id is a number
                 }

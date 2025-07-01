@@ -61,6 +61,7 @@ export async function getStats(): Promise<ServiceResponse<DashboardStats>> {
         amount: true,
       },
       where: {
+        status: "SUCCESS",
         student: {
           deletedAt: null, // Ensure we only count payments for active students
         }
@@ -203,6 +204,7 @@ export async function getRecentActivity(): Promise<ServiceResponse<any[]>> {
           student: { select: { name: true, studentId: true } },
         },
         where: {
+          status: "SUCCESS",
           student: {
             deletedAt: null, // Ensure we only count payments for active students
           }

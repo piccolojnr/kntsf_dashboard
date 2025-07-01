@@ -8,6 +8,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { format } from "date-fns";
 
+import { getHtmlFromString } from "@/components/form/fields/initial-value";
+
 interface ArticleViewProps {
   article: {
     id: number;
@@ -32,6 +34,7 @@ interface ArticleViewProps {
 }
 
 export function ArticleView({ article }: ArticleViewProps) {
+  const html = getHtmlFromString(article.content);
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -103,7 +106,10 @@ export function ArticleView({ article }: ArticleViewProps) {
               {/* Article Content */}
               <div className="prose prose-lg max-w-none">
                 <div className="whitespace-pre-wrap leading-relaxed">
-                  {article.content}
+                  <div
+                    className="prose"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                  />
                 </div>
               </div>
             </CardContent>

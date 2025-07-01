@@ -23,9 +23,9 @@ interface NewsletterBaseProps {
 export const NewsletterBase = ({
   title,
   content,
-  previewText = "Newsletter from KNUST SRC",
+  previewText = "Newsletter from KNUTSFORD SRC",
   unsubscribeUrl = "#",
-  organizationName = "KNUST SRC",
+  organizationName = "KNUTSFORD SRC",
 }: NewsletterBaseProps) => ({
   text: `Hi there,\n\n${title}\n\n${content}\n\nYou're receiving this email because you subscribed to ${organizationName} newsletter.\n\nUnsubscribe from these emails: ${unsubscribeUrl}\n\n© 2024 ${organizationName}. All rights reserved.`,
   html: (

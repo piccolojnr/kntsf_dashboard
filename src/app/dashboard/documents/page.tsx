@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { DocumentClient } from "./client";
 
 export const metadata: Metadata = {
-  title: "Document Management | KNUST SRC",
+  title: "Document Management | KNUTSFORD SRC",
   description: "Manage and organize important documents",
 };
 

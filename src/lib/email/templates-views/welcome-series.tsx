@@ -23,7 +23,7 @@ interface WelcomeSeriesProps {
 
 export const WelcomeSeries = ({
   firstName = "there",
-  organizationName = "KNUST SRC",
+  organizationName = "KNUTSFORD SRC",
   logoUrl = "/placeholder.svg?height=60&width=200",
   unsubscribeUrl = "#",
   websiteUrl = "#",

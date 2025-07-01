@@ -119,7 +119,7 @@ export function NewsletterEditor() {
                     content:
                       formData.content ||
                       "Newsletter content will appear here...",
-                    previewText: `${formData.title} - KNUST SRC Newsletter`,
+                    previewText: `${formData.title} - KNUTSFORD SRC Newsletter`,
                   }}
                   trigger={
                     <Button variant="outline" size="sm">

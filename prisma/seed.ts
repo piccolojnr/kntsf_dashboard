@@ -348,7 +348,7 @@ async function main() {
                 create: {
                     email: "src@knust.edu.gh",
                     phone: "+233 XX XXX XXXX",
-                    address: "KNUST Main Campus, Kumasi, Ghana",
+                    address: "KNUTSFORD Main Campus, Kumasi, Ghana",
                     website: "https://knust.edu.gh/src",
                     socialLinks: {
                         facebook: "https://facebook.com/knustsrc",

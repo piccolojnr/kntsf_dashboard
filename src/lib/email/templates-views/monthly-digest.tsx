@@ -37,7 +37,7 @@ export const MonthlyDigest = ({
   year,
   highlights,
   upcomingEvents,
-  organizationName = "KNUST SRC",
+  organizationName = "KNUTSFORD SRC",
   logoUrl = "/placeholder.svg?height=60&width=200",
   unsubscribeUrl = "#",
 }: MonthlyDigestProps) => {

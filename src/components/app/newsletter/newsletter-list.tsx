@@ -164,7 +164,7 @@ export function NewsletterList() {
                   data={{
                     title: newsletter.title,
                     content: newsletter.content,
-                    previewText: `${newsletter.title} - KNUST SRC Newsletter`,
+                    previewText: `${newsletter.title} - KNUTSFORD SRC Newsletter`,
                   }}
                   trigger={
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -333,10 +333,12 @@ export function NewsletterList() {
                                 data={{
                                   title: newsletter.title,
                                   content: newsletter.content,
-                                  previewText: `${newsletter.title} - KNUST SRC Newsletter`,
+                                  previewText: `${newsletter.title} - KNUTSFORD SRC Newsletter`,
                                 }}
                                 trigger={
-                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                  <DropdownMenuItem
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
                                     <Eye className="h-4 w-4 mr-2" />
                                     Preview
                                   </DropdownMenuItem>

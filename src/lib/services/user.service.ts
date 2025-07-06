@@ -74,11 +74,13 @@ export async function updateUser(userData: User): Promise<ServiceResponse<User>>
       return { success: false, error: 'Unauthorized' };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { image: _, socialLinks, ...updateData } = userData;
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(id) },
       data: {
-        ...userData,
-        socialLinks: userData.socialLinks ? JSON.stringify(userData.socialLinks) : undefined,
+        ...updateData,
+        socialLinks: socialLinks ? JSON.stringify(socialLinks) : undefined,
       },
     })
 

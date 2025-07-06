@@ -170,6 +170,26 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
       qrCode,
       permitCode
     })
+
+
+    if (!permitData.paymentId) {
+      const newPayment = await prisma.payment.create({
+        data: {
+          amount: permit.amountPaid,
+          status: 'SUCCESS',
+          studentId: student.id,
+          paymentReference: generatePaymentReference()
+        }
+      });
+
+      await prisma.permit.update({
+        where: { id: permit.id },
+        data: {
+          payment: { connect: { id: newPayment.id } }
+        }
+      });
+    }
+
     return {
       success: true,
       qrCode,
@@ -340,9 +360,13 @@ export async function checkValidity(permitId: number): Promise<ServiceResponse<{
 
   }
 }
-
 function generatePermitCode(): string {
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 4);
   return nanoid();
 
+}
+
+function generatePaymentReference(): string {
+  const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 8);
+  return nanoid();
 }

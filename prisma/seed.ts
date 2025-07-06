@@ -102,6 +102,15 @@ async function main() {
                 "published": true
             },
             {
+                "name": "Rahim Daud",
+                "position": "Entertainment Secretary",
+                "positionDescription": "Organizing entertainment events and cultural activities",
+                "biography": "Passionate about enhancing student life through engaging entertainment programs.",
+                "category": "main_executive",
+                "roleId": executiveRole.id,
+                "published": true
+            },
+            {
                 "name": "Naeem Latif Menard",
                 "position": "Public Relations Officer",
                 "positionDescription": "Leading communication and public engagement initiatives",

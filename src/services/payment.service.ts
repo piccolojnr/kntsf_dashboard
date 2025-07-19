@@ -21,6 +21,16 @@ export class PaymentService {
                     data: studentData
                 })
             }
+            // If student exists but email is missing, update it
+            if (!student.email && studentData?.email) {
+                student = await prisma.student.update({
+                    where: { studentId: student.studentId },
+                    data: {
+                        email: studentData.email,
+                        number: studentData.number,
+                    }
+                })
+            }
 
             return student
         } catch (error) {
@@ -82,7 +92,7 @@ export class PaymentService {
         try {
             // Initialize Paystack transaction
             const paystackResponse = await this.initializePaystackTransaction(
-                student.email,
+                student.email || "",
                 amount,
                 paymentReference,
                 callback_url,

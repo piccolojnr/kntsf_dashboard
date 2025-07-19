@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE `Student` MODIFY `name` VARCHAR(191) NULL,
+    MODIFY `email` VARCHAR(191) NULL,
+    MODIFY `course` VARCHAR(191) NULL,
+    MODIFY `level` VARCHAR(191) NULL,
+    MODIFY `number` VARCHAR(191) NULL;

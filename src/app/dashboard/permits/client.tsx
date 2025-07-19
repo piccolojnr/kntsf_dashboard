@@ -92,7 +92,13 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               expiryDate: permit.expiryDate,
               id: permit.id + "",
             },
-            student: student,
+            student: {
+              email: student.email ?? "",
+              name: student.name ?? "",
+              studentId: student.studentId,
+              course: student.course ?? "",
+              level: student.level ?? "",
+            },
             permitCode: originalCode,
           });
 

@@ -35,14 +35,14 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
     useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
 
   const { data: studentsData, isLoading } = useQuery({
-    queryKey: ["students", currentPage, debouncedSearch],
+    queryKey: ["students", currentPage, pageSize, debouncedSearch],
     queryFn: async () => {
       const response = await services.student.getAll({
         page: currentPage,
@@ -231,6 +231,11 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         currentPage={currentPage}
         totalPages={studentsData?.totalPages || 1}
         onPageChange={setCurrentPage}
+        itemsPerPage={pageSize}
+        onItemsPerPageChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
       />
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>

@@ -1,60 +1,31 @@
 "use client";
 
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { DataTablePagination } from "../ui/data-table-pagination";
 
 interface MyPaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  itemsPerPage?: number;
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
 }
 
 export function MyPagination({
   currentPage,
   totalPages,
   onPageChange,
+  itemsPerPage = 10,
+  onItemsPerPageChange,
 }: MyPaginationProps) {
   return (
-    <Pagination>
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            className={
-              currentPage === 1
-                ? "pointer-events-none opacity-50"
-                : "cursor-pointer"
-            }
-          />
-        </PaginationItem>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-          <PaginationItem key={page}>
-            <PaginationLink
-              onClick={() => onPageChange(page)}
-              isActive={currentPage === page}
-              className="cursor-pointer"
-            >
-              {page}
-            </PaginationLink>
-          </PaginationItem>
-        ))}
-        <PaginationItem>
-          <PaginationNext
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            className={
-              currentPage === totalPages
-                ? "pointer-events-none opacity-50"
-                : "cursor-pointer"
-            }
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
+    <DataTablePagination
+      page={currentPage - 1}
+      lastPage={totalPages - 1}
+      updatePage={(page) => onPageChange(page + 1)}
+      itemsPerPage={itemsPerPage}
+      onItemsPerPageChange={
+        onItemsPerPageChange ? (size) => onItemsPerPageChange(size) : undefined
+      }
+    />
   );
 }

@@ -156,11 +156,11 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
 
     const res = await services.email.sendPermitEmails({
       student: {
-        email: student.email,
-        name: student.name,
-        studentId: student.studentId,
-        course: student.course,
-        level: student.level
+        email: student.email || '',
+        name: student.name || '',
+        studentId: student.studentId || '',
+        course: student.course || '',
+        level: student.level || ''
       },
       permit: {
         id: permit.id.toString(),

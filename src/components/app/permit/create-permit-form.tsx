@@ -131,7 +131,16 @@ export default function CreatePermitForm({
           const response =
             await services.student.searchStudent(watchedStudentId);
           if (response.success && response.data) {
-            setSearchResults(response.data);
+            setSearchResults(
+              response.data.map((student: any) => ({
+                id: student.id,
+                studentId: student.studentId,
+                name: student.name || "",
+                email: student.email || "",
+                course: student.course || "",
+                level: student.level || "",
+              }))
+            );
           } else {
             setSearchResults([]);
             console.error("Error searching student:", response.error);

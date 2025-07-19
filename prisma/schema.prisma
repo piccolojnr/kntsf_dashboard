@@ -47,11 +47,11 @@ model Role {
 model Student {
   id          Int           @id @default(autoincrement())
   studentId   String        @unique
-  name        String
-  email       String
-  course      String
-  level       String
-  number      String
+  name        String?
+  email       String?
+  course      String?
+  level       String?
+  number      String?
   permits     Permit[] // Permits issued to this student
   payments    Payment[] // Payments made by this student
   createdAt   DateTime      @default(now())

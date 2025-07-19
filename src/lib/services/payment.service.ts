@@ -76,7 +76,24 @@ export async function getPayments(): Promise<ServiceResponse<PaymentWithRelation
 
         return {
             success: true,
-            data: payments
+            data: {
+                ...payments.map(payment => ({
+                    ...payment,
+                    student: {
+                        studentId: payment.student.studentId,
+                        name: payment.student.name || '',
+                        email: payment.student.email || '',
+                        course: payment.student.course || '',
+                        level: payment.student.level || ''
+                    },
+                    permit: payment.permit ? {
+                        id: payment.permit.id,
+                        permitCode: payment.permit.permitCode,
+                        status: payment.permit.status,
+                        createdAt: payment.permit.createdAt
+                    } : null
+                }))
+            }
         }
     } catch (error) {
         log.error('Error fetching payments:', error)
@@ -118,7 +135,22 @@ export async function getPaymentById(id: number): Promise<ServiceResponse<Paymen
 
         return {
             success: true,
-            data: payment
+            data: {
+                ...payment,
+                student: {
+                    studentId: payment.student.studentId,
+                    name: payment.student.name || '',
+                    email: payment.student.email || '',
+                    course: payment.student.course || '',
+                    level: payment.student.level || ''
+                },
+                permit: payment.permit ? {
+                    id: payment.permit.id,
+                    permitCode: payment.permit.permitCode,
+                    status: payment.permit.status,
+                    createdAt: payment.permit.createdAt
+                } : null
+            }
         }
     } catch (error) {
         log.error('Error fetching payment by ID:', error)
@@ -211,7 +243,24 @@ export async function getPaymentsByStatus(status: PaymentStatus): Promise<Servic
 
         return {
             success: true,
-            data: payments
+            data: {
+                ...payments.map(payment => ({
+                    ...payment,
+                    student: {
+                        studentId: payment.student.studentId,
+                        name: payment.student.name || '',
+                        email: payment.student.email || '',
+                        course: payment.student.course || '',
+                        level: payment.student.level || ''
+                    },
+                    permit: payment.permit ? {
+                        id: payment.permit.id,
+                        permitCode: payment.permit.permitCode,
+                        status: payment.permit.status,
+                        createdAt: payment.permit.createdAt
+                    } : null
+                }))
+            }
         }
     } catch (error) {
         log.error('Error fetching payments by status:', error)
@@ -278,7 +327,24 @@ export async function searchPayments(query: string): Promise<ServiceResponse<Pay
 
         return {
             success: true,
-            data: payments
+            data: {
+                ...payments.map(payment => ({
+                    ...payment,
+                    student: {
+                        studentId: payment.student.studentId,
+                        name: payment.student.name || '',
+                        email: payment.student.email || '',
+                        course: payment.student.course || '',
+                        level: payment.student.level || ''
+                    },
+                    permit: payment.permit ? {
+                        id: payment.permit.id,
+                        permitCode: payment.permit.permitCode,
+                        status: payment.permit.status,
+                        createdAt: payment.permit.createdAt
+                    } : null
+                }))
+            }
         }
     } catch (error) {
         log.error('Error searching payments:', error)
@@ -340,7 +406,26 @@ export async function getPaymentsPaginated(filters: PaymentFilters = {}): Promis
 
         return {
             success: true,
-            data: { data, total, page, pageSize }
+            data: {
+                data: {
+                    ...data.map(payment => ({
+                        ...payment,
+                        student: {
+                            studentId: payment.student.studentId,
+                            name: payment.student.name || '',
+                            email: payment.student.email || '',
+                            course: payment.student.course || '',
+                            level: payment.student.level || ''
+                        },
+                        permit: payment.permit ? {
+                            id: payment.permit.id,
+                            permitCode: payment.permit.permitCode,
+                            status: payment.permit.status,
+                            createdAt: payment.permit.createdAt
+                        } : null
+                    }))
+                }, total, page, pageSize
+            }
         };
     } catch (error) {
         log.error('Error fetching paginated payments:', error);

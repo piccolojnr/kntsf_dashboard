@@ -360,9 +360,9 @@ async function main() {
                     address: "KNUTSFORD Main Campus, Kumasi, Ghana",
                     website: "https://knust.edu.gh/src",
                     socialLinks: {
-                        facebook: "https://facebook.com/knustsrc",
-                        twitter: "https://twitter.com/knustsrc",
-                        instagram: "https://instagram.com/knustsrc"
+                        facebook: "https://facebook.com/kntsfsrc",
+                        twitter: "https://twitter.com/kntsfsrc",
+                        instagram: "https://instagram.com/kntsfsrc"
                     },
 
                 }

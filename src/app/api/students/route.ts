@@ -71,4 +71,36 @@ export async function GET(request: Request) {
             { status: 500 }
         )
     }
-} 
+}
+
+
+// update student
+export async function PUT(request: Request) {
+    try {
+        const data = await request.json()
+        const validation = studentSchema.safeParse(data)
+
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: validation.error },
+                { status: 400 }
+            )
+        }
+
+        const response = await services.student.update(data.studentId, data)
+        if (!response) {
+            return NextResponse.json(
+                response,
+                { status: 500 }
+            )
+        }
+
+        return NextResponse.json(response)
+    } catch (error) {
+        console.error('Error updating student:', error)
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        )
+    }
+}

@@ -85,9 +85,29 @@ export async function submitIdea(data: IdeaData): Promise<ServiceResponse<IdeaWi
             },
         })
 
+        if (idea.student) {
+            idea.student.name = idea.student.name ?? "";
+            idea.student.email = idea.student.email ?? "";
+        }
+
+        const normalizedIdea: IdeaWithRelations = {
+            id: idea.id,
+            title: idea.title,
+            description: idea.description,
+            category: idea.category,
+            status: idea.status,
+            createdAt: idea.createdAt,
+            student: {
+                name: idea.student.name ? idea.student.name : "",
+                email: idea.student.email ? idea.student.email : "",
+                studentId: idea.student.studentId ? idea.student.studentId : ""
+            },
+            reviewedBy: idea.reviewedBy
+        };
+
         return {
             success: true,
-            data: idea
+            data: normalizedIdea
         }
     } catch (error) {
         log.error('Error submitting idea:', error)
@@ -142,10 +162,19 @@ export async function getIdeas(
             take: limit
         })
 
+        const normalizedIdeas = ideas.map(idea => ({
+            ...idea,
+            student: {
+                name: idea.student.name || "",
+                email: idea.student.email || "",
+                studentId: idea.student.studentId
+            }
+        }));
+
         return {
             success: true,
             data: {
-                data: ideas,
+                data: normalizedIdeas,
                 total,
                 page,
                 totalPages: Math.ceil(total / limit)
@@ -214,7 +243,16 @@ export async function getStudentIdeas(
         return {
             success: true,
             data: {
-                data: ideas,
+                data: {
+                    ...ideas.map(idea => ({
+                        ...idea,
+                        student: {
+                            name: idea.student.name || "",
+                            email: idea.student.email || "",
+                            studentId: idea.student.studentId
+                        }
+                    })),
+                },
                 total,
                 page,
                 totalPages: Math.ceil(total / limit)
@@ -270,7 +308,20 @@ export async function updateIdeaStatus(
 
         return {
             success: true,
-            data: idea
+            data: {
+                id: idea.id,
+                title: idea.title,
+                description: idea.description,
+                category: idea.category,
+                status: idea.status,
+                createdAt: idea.createdAt,
+                student: {
+                    name: idea.student.name || "",
+                    email: idea.student.email || "",
+                    studentId: idea.student.studentId
+                },
+                reviewedBy: idea.reviewedBy
+            }
         }
     } catch (error) {
         log.error('Error updating idea status:', error)
@@ -310,7 +361,20 @@ export async function getById(id: number): Promise<ServiceResponse<IdeaWithRelat
 
         return {
             success: true,
-            data: idea
+            data: {
+                id: idea.id,
+                title: idea.title,
+                description: idea.description,
+                category: idea.category,
+                status: idea.status,
+                createdAt: idea.createdAt,
+                student: {
+                    name: idea.student.name || "",
+                    email: idea.student.email || "",
+                    studentId: idea.student.studentId
+                },
+                reviewedBy: idea.reviewedBy
+            }
         }
     } catch (error) {
         log.error('Error fetching idea:', error)

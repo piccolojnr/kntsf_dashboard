@@ -41,7 +41,7 @@ export const formSchema = z.object({
   }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
-  }).optional(),
+  }).optional().or(z.literal("")),
   roleId: z.string({
     required_error: "Please select a role.",
   }),
@@ -64,7 +64,7 @@ export function UserForm({ selectedUser, rolesData, onSubmit, isSubmitting }: Us
       username: selectedUser?.username || "",
       name: selectedUser?.name || "",
       email: selectedUser?.email || "",
-      password: "",
+      password: selectedUser ? "" : "",
       roleId: selectedUser?.roleId.toString() || "",
       position: selectedUser?.position || "",
       positionDescription: selectedUser?.positionDescription || "",

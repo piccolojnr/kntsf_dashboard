@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { format } from "date-fns";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -110,6 +110,31 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
       } catch (error) {
         console.error("Error revoking permit:", error);
         toast.error("Failed to revoke permit");
+      }
+    },
+    [permissions.isExecutive, queryClient]
+  );
+
+  const handleDelete = useCallback(
+    async (permitId: number) => {
+      if (!permissions.isExecutive) {
+        toast.error("You don't have permission to delete permits");
+        return;
+      }
+
+      if (!confirm("Are you sure you want to delete this permit? This action cannot be undone and will also delete the associated payment record.")) return;
+
+      try {
+        const response = await services.permit.deletePermit(permitId);
+        if (response.success) {
+          toast.success("Permit deleted successfully");
+          queryClient.invalidateQueries({ queryKey: ["permits"] });
+        } else {
+          toast.error(response.error || "Failed to delete permit");
+        }
+      } catch (error) {
+        console.error("Error deleting permit:", error);
+        toast.error("Failed to delete permit");
       }
     },
     [permissions.isExecutive, queryClient]
@@ -297,15 +322,28 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                         {permit.issuedBy?.username || "Unknown"}
                       </TableCell>
                       <TableCell>
-                        {permit.status === "active" && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRevoke(permit.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <div className="flex space-x-2">
+                          {permit.status === "active" && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleRevoke(permit.id)}
+                              title="Revoke Permit"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {permit.status === "revoked" && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(permit.id)}
+                              title="Delete Permit"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

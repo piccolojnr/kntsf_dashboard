@@ -254,7 +254,28 @@ export async function verify(permitCode: string): Promise<{
 
 export async function revoke(permitId: number): Promise<ServiceResponse<StudentPermit>> {
   try {
-    const permit = await prisma.permit.update({
+    const permit = await prisma.permit.findUnique({
+      where: { id: permitId },
+      include: {
+        student: true,
+        issuedBy: {
+          select: {
+            username: true
+          }
+        },
+        payment: true
+      }
+    })
+
+    if (!permit) {
+      return {
+        success: false,
+        error: 'Permit not found'
+      }
+    }
+
+    // Update permit status to revoked
+    const updatedPermit = await prisma.permit.update({
       where: { id: permitId },
       data: { status: 'revoked' },
       include: {
@@ -267,14 +288,21 @@ export async function revoke(permitId: number): Promise<ServiceResponse<StudentP
       }
     })
 
+    // Cancel associated payment if it exists
+    if (permit.payment) {
+      await prisma.payment.update({
+        where: { id: permit.payment.id },
+        data: { status: 'CANCELLED' }
+      })
+    }
+
     return {
       success: true,
-      data: permit
+      data: updatedPermit
     }
   } catch (error: any) {
     log.error('Error revoking permit:', error)
     return handleError(error)
-
   }
 }
 
@@ -295,6 +323,51 @@ export async function getStats(): Promise<ServiceResponse> {
   } catch (error: any) {
     log.error('Error fetching permit stats:', error)
     throw new Error(error.message)
+  }
+}
+
+export async function deletePermit(permitId: number): Promise<ServiceResponse<{ deleted: boolean }>> {
+  try {
+    const permit = await prisma.permit.findUnique({
+      where: { id: permitId },
+      include: {
+        payment: true
+      }
+    })
+
+    if (!permit) {
+      return {
+        success: false,
+        error: 'Permit not found'
+      }
+    }
+
+    if (permit.status !== 'revoked') {
+      return {
+        success: false,
+        error: 'Only revoked permits can be deleted'
+      }
+    }
+
+    // Delete associated payment if it exists
+    if (permit.payment) {
+      await prisma.payment.delete({
+        where: { id: permit.payment.id }
+      })
+    }
+
+    // Delete the permit
+    await prisma.permit.delete({
+      where: { id: permitId }
+    })
+
+    return {
+      success: true,
+      data: { deleted: true }
+    }
+  } catch (error: any) {
+    log.error('Error deleting permit:', error)
+    return handleError(error)
   }
 }
 

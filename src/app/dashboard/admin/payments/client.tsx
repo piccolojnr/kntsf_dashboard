@@ -31,10 +31,7 @@ export function PaymentsClient() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Query
-  const { data, isLoading, error } = useQuery<
-    { data: any[]; total: number; page: number; pageSize: number } | undefined,
-    Error
-  >({
+  const { data, isLoading, error } = useQuery({
     queryKey: [
       "payments-history-paginated",
       {
@@ -69,6 +66,7 @@ export function PaymentsClient() {
   }
 
   const paginated = data?.data || [];
+  console.log(paginated, data);
   const totalPages = data?.total
     ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
     : 1;

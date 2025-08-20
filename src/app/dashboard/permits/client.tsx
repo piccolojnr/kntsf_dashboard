@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { format } from "date-fns";
-import { Plus, Search, Trash2, X } from "lucide-react";
+import { Mail, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -51,6 +51,10 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [isResendDialogOpen, setIsResendDialogOpen] = useState(false);
+  const [resendPermitId, setResendPermitId] = useState<number | null>(null);
+  const [resendEmail, setResendEmail] = useState<string>("");
+  const [isResending, setIsResending] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
@@ -70,6 +74,35 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
       return response.data;
     },
   });
+
+  const openResendDialog = useCallback((permitId: number) => {
+    setResendPermitId(permitId);
+    const permit = permitsData?.data.find((p) => p.id === permitId);
+    setResendEmail(permit?.student.email ?? "");
+    setIsResendDialogOpen(true);
+  }, [permitsData?.data]);
+
+  async function handleConfirmResend() {
+    if (!resendPermitId) return;
+    try {
+      setIsResending(true);
+      const response = await services.permit.resendPermitEmail(resendPermitId, resendEmail);
+      if (response.success) {
+        toast.success("Permit email resent successfully");
+        setIsResendDialogOpen(false);
+        setResendPermitId(null);
+        setResendEmail("");
+        queryClient.invalidateQueries({ queryKey: ["permits"] });
+      } else {
+        toast.error(response.error || "Failed to resend permit email");
+      }
+    } catch (error) {
+      console.error("Error resending permit email:", error);
+      toast.error("Failed to resend permit email");
+    } finally {
+      setIsResending(false);
+    }
+  }
 
   const handleRevoke = useCallback(
     async (permitId: number) => {
@@ -343,6 +376,16 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                               <X className="w-4 h-4" />
                             </Button>
                           )}
+                          {permit.status !== "revoked" && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => openResendDialog(permit.id)}
+                              title="Resend Permit"
+                            >
+                              <Mail className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -358,6 +401,35 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
         totalPages={permitsData?.totalPages || 1}
         onPageChange={setCurrentPage}
       />
+
+      {/* Resend Permit Modal */}
+      <Dialog open={isResendDialogOpen} onOpenChange={setIsResendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resend Permit Email</DialogTitle>
+            <DialogDescription>
+              Update the student&apos;s email if needed, then resend the permit and receipt emails.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Student Email</label>
+              <Input
+                type="email"
+                placeholder="student@example.com"
+                value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsResendDialogOpen(false)} disabled={isResending}>Cancel</Button>
+              <Button onClick={handleConfirmResend} disabled={isResending || !resendPermitId}>
+                {isResending ? "Resending..." : "Resend"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

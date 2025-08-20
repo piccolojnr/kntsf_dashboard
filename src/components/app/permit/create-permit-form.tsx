@@ -66,6 +66,7 @@ const permitFormSchema = z.object({
       today.setHours(0, 0, 0, 0);
       return date >= today;
     }, "Expiry date cannot be in the past"),
+  email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
 });
 
 type PermitFormValues = z.infer<typeof permitFormSchema>;
@@ -116,7 +117,8 @@ export default function CreatePermitForm({
     defaultValues: {
       studentId: studentId || "",
       expiryDate: getDefaultExpiryDate(),
-      amountPaid: "50.00",
+      amountPaid: "100.00",
+      email: "",
     },
   });
 
@@ -182,6 +184,7 @@ export default function CreatePermitForm({
         studentId: "",
         amountPaid: "50.00",
         expiryDate: getDefaultExpiryDate(),
+        email: "",
       });
       setStudentData(null);
       setSearchResults([]);
@@ -198,12 +201,14 @@ export default function CreatePermitForm({
   const selectStudent = (student: Student) => {
     setStudentData(student);
     form.setValue("studentId", student.studentId);
+    form.setValue("email", student.email || "");
     setSearchResults([]);
   };
 
   const clearSelection = () => {
     setStudentData(null);
     form.setValue("studentId", "");
+    form.setValue("email", "");
     setSearchResults([]);
   };
 
@@ -266,6 +271,31 @@ export default function CreatePermitForm({
                       {studentId
                         ? "Student ID is pre-filled"
                         : "Enter the student's unique ID number"}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground font-medium">
+                      Student Email (optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="student@example.com"
+                        disabled={isSubmitting}
+                        className="bg-background dark:bg-background/50 border-input focus:border-primary focus:ring-primary/20"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-muted-foreground text-sm">
+                      If provided, this will update the student&apos;s email before sending the permit.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

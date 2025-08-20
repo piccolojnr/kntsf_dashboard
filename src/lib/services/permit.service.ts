@@ -15,6 +15,7 @@ export interface PermitData {
   paymentId?: number
   amountPaid?: number
   expiryDate?: Date
+  email?: string
 }
 
 export interface PaginatedResponse<T> {
@@ -129,6 +130,15 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
       return { success: false, error: 'Configuration not found' }
     }
 
+    // Optionally update student email before creating permit
+    const providedEmail = permitData.email?.trim()
+    if (providedEmail) {
+      await prisma.student.update({
+        where: { id: student.id },
+        data: { email: providedEmail }
+      })
+    }
+
     const permit = await prisma.permit.create({
       data: {
         permitCode: hashedCode,
@@ -156,7 +166,7 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
 
     const res = await services.email.sendPermitEmails({
       student: {
-        email: student.email || '',
+        email: providedEmail || student.email || '',
         name: student.name || '',
         studentId: student.studentId || '',
         course: student.course || '',
@@ -431,6 +441,69 @@ export async function checkValidity(permitId: number): Promise<ServiceResponse<{
     log.error('Error checking permit validity:', error)
     return handleError(error)
 
+  }
+}
+
+export async function resendPermitEmail(permitId: number, newEmail?: string): Promise<ServiceResponse> {
+  try {
+    const permit = await prisma.permit.findUnique({
+      where: { id: permitId },
+      include: {
+        student: true,
+        issuedBy: {
+          select: {
+            username: true
+          }
+        }
+      }
+    })
+
+    if (!permit) {
+      return {
+        success: false,
+        error: 'Permit not found'
+      }
+    }
+
+    // Optionally update student's email before resending
+    if (newEmail && newEmail.trim() && newEmail.trim() !== (permit.student.email || '')) {
+      const trimmedEmail = newEmail.trim()
+      await prisma.student.update({
+        where: { id: permit.student.id },
+        data: { email: trimmedEmail }
+      })
+      // Reflect the change locally for sending
+      permit.student.email = trimmedEmail
+    }
+
+    const verificationUrl = `${BASE_URL}/permits/verify?code=${permit.originalCode}`
+    const qrCode = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(verificationUrl)}&size=200x200`
+
+    const res = await services.email.sendPermitEmails({
+      student: {
+        email: permit.student.email || '',
+        name: permit.student.name || '',
+        studentId: permit.student.studentId || '',
+        course: permit.student.course || '',
+        level: permit.student.level || ''
+      },
+      permit: {
+        id: permit.id.toString(),
+        amountPaid: permit.amountPaid,
+        expiryDate: permit.expiryDate
+      },
+      qrCode,
+      permitCode: permit.originalCode
+    })
+
+    return {
+      success: true,
+      data: permit,
+      error: res.success ? undefined : res.error
+    }
+  } catch (error: any) {
+    log.error('Error resending permit email:', error)
+    return handleError(error)
   }
 }
 function generatePermitCode(): string {

@@ -10,6 +10,10 @@ import { getSession } from '../auth/auth'
 import services from '.'
 import { handleError } from '../utils'
 
+// Simple in-memory cache for permit lookups
+const permitCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 export interface PermitData {
   studentId: string
   paymentId?: number
@@ -195,6 +199,9 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
     const permitCode = `${yearPrefix}-${code}`
     const hashedCode = await bcrypt.hash(permitCode, 10)
 
+    // Generate a fast lookup hash (first 6 characters for quick search)
+    const permitHash = permitCode.slice(-6)
+
     const config = await prisma.config.findFirst({
       where: {
         id: 1
@@ -221,6 +228,7 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
       data: {
         permitCode: hashedCode,
         originalCode: permitCode,
+        permitHash: permitHash,
         payment: permitData.paymentId ? { connect: { id: permitData.paymentId } } : undefined,
         expiryDate: config.permitConfig?.expirationDate || permitData.expiryDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
         amountPaid: config.permitConfig?.defaultAmount || permitData.amountPaid || 100,
@@ -303,15 +311,53 @@ export async function verify(permitCode: string): Promise<{
   reason?: string
 }> {
   try {
-    // Use a more efficient approach - fetch permits in smaller batches
-    // and add a limit to prevent excessive memory usage
+    // OPTIMIZATION: Use permitHash for faster lookups if available
+    // First try to find by permitHash (if implemented)
+    if (permitCode.length === 6) { // Assuming permit codes are 6 characters
+      const permitByHash = await prisma.permit.findFirst({
+        where: {
+          permitHash: permitCode,
+          status: 'active'
+        },
+        include: {
+          student: true,
+          issuedBy: {
+            select: {
+              username: true
+            }
+          }
+        }
+      })
+
+      if (permitByHash) {
+        // Verify the actual permit code
+        const isValid = await bcrypt.compare(permitCode, permitByHash.permitCode)
+        if (isValid) {
+          const isExpired = new Date() > permitByHash.expiryDate
+          if (isExpired) {
+            // Update status to expired
+            await prisma.permit.update({
+              where: { id: permitByHash.id },
+              data: { status: 'expired' }
+            })
+            return { valid: false, reason: 'expired', permit: permitByHash }
+          }
+          return { valid: true, permit: permitByHash }
+        }
+      }
+    }
+
+    // FALLBACK: If no hash match or hash not implemented, use optimized search
+    // Only search for permits that might match (by length or pattern)
     const permits = await prisma.permit.findMany({
       where: {
         status: 'active',
-        // Add a reasonable limit to prevent excessive processing
-        // This is a safety measure while we implement a better solution
+        // Add more specific filtering to reduce the search space
+        originalCode: {
+          contains: permitCode.slice(-4) // Search by last 4 characters
+        }
       },
-      take: 1000, // Limit to prevent excessive processing
+      take: 100, // Reduced from 1000 to 100
       include: {
         student: true,
         issuedBy: {
@@ -322,8 +368,8 @@ export async function verify(permitCode: string): Promise<{
       }
     })
 
-    // Process permits in parallel for better performance
-    const verificationPromises = permits.map(async (permit) => {
+    // Process permits in parallel with early termination
+    for (const permit of permits) {
       try {
         const isValid = await bcrypt.compare(permitCode, permit.permitCode)
         if (isValid) {
@@ -338,26 +384,10 @@ export async function verify(permitCode: string): Promise<{
           }
           return { valid: true, permit }
         }
-        return null
       } catch (error) {
         log.error(`Error comparing permit ${permit.id}:`, error)
-        return null
+        continue
       }
-    })
-
-    // Wait for all comparisons to complete
-    const results = await Promise.all(verificationPromises)
-
-    // Find the first valid result
-    const validResult = results.find(result => result && result.valid)
-    if (validResult) {
-      return validResult
-    }
-
-    // Check if any permit was found but expired
-    const expiredResult = results.find(result => result && result.reason === 'expired')
-    if (expiredResult) {
-      return expiredResult
     }
 
     return { valid: false, reason: 'not_found' }
@@ -402,6 +432,10 @@ export async function revoke(permitId: number): Promise<ServiceResponse<StudentP
         }
       }
     })
+
+    // Invalidate cache for this permit
+    const cacheKey = `permit_${updatedPermit.originalCode}`
+    permitCache.delete(cacheKey)
 
     // Cancel associated payment if it exists
     if (permit.payment) {
@@ -546,6 +580,79 @@ export async function checkValidity(permitId: number): Promise<ServiceResponse<{
     log.error('Error checking permit validity:', error)
     return handleError(error)
 
+  }
+}
+
+// Fast permit lookup by code (for verification)
+export async function getPermitByCode(permitCode: string): Promise<ServiceResponse<StudentPermit>> {
+  try {
+    // Check cache first
+    const cacheKey = `permit_${permitCode}`
+    const cached = permitCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return {
+        success: true,
+        data: cached.data
+      }
+    }
+
+    // Try to find by original code first (exact match)
+    const permit = await prisma.permit.findFirst({
+      where: {
+        originalCode: permitCode,
+        status: 'active'
+      },
+      include: {
+        student: true,
+        issuedBy: {
+          select: {
+            username: true
+          }
+        }
+      }
+    })
+
+    if (permit) {
+      // Cache the result
+      permitCache.set(cacheKey, { data: permit, timestamp: Date.now() })
+      return {
+        success: true,
+        data: permit
+      }
+    }
+
+    // If not found by original code, try by hash
+    const permitByHash = await prisma.permit.findFirst({
+      where: {
+        permitHash: permitCode,
+        status: 'active'
+      },
+      include: {
+        student: true,
+        issuedBy: {
+          select: {
+            username: true
+          }
+        }
+      }
+    })
+
+    if (permitByHash) {
+      // Cache the result
+      permitCache.set(cacheKey, { data: permitByHash, timestamp: Date.now() })
+      return {
+        success: true,
+        data: permitByHash
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Permit not found'
+    }
+  } catch (error: any) {
+    log.error('Error fetching permit by code:', error)
+    return handleError(error)
   }
 }
 

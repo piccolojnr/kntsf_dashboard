@@ -21,6 +21,14 @@ import { SessionUser } from "@/lib/types/common";
 import { AccessRoles } from "@/lib/role";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface StudentsClientProps {
   user: SessionUser;
@@ -37,21 +45,48 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [courseFilter, setCourseFilter] = useState<string>("all");
+  const [levels, setLevels] = useState<string[]>([]);
+  const [courses, setCourses] = useState<string[]>([]);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
 
   const { data: studentsData, isLoading } = useQuery({
-    queryKey: ["students", currentPage, pageSize, debouncedSearch],
+    queryKey: [
+      "students",
+      currentPage,
+      pageSize,
+      debouncedSearch,
+      levelFilter,
+      courseFilter,
+    ],
     queryFn: async () => {
       const response = await services.student.getAll({
         page: currentPage,
         pageSize,
         search: debouncedSearch,
+        level: levelFilter === "all" ? undefined : levelFilter,
+        course: courseFilter === "all" ? undefined : courseFilter,
       });
       if (!response.success) {
         throw new Error(response.error || "Failed to load students");
       }
+      return response.data;
+    },
+  });
+
+  // Load distinct filter options
+  useQuery({
+    queryKey: ["student-filters"],
+    queryFn: async () => {
+      const response = await services.student.getDistinctFilters();
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Failed to load filters");
+      }
+      setLevels(response.data.levels);
+      setCourses(response.data.courses);
       return response.data;
     },
   });
@@ -209,6 +244,51 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         onImport={handleImport}
         isExecutive={permissions.isExecutive}
       />
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="level-filter">Level</Label>
+          <Select
+            value={levelFilter}
+            onValueChange={(value) => {
+              setLevelFilter(value);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger id="level-filter" className="w-full">
+              <SelectValue placeholder="Select level" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              {levels.map((lvl) => (
+                <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="course-filter">Course</Label>
+          <Select
+            value={courseFilter}
+            onValueChange={(value) => {
+              setCourseFilter(value);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger id="course-filter" className="w-full">
+              <SelectValue placeholder="Select course" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              {courses.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <Input
         type="file"

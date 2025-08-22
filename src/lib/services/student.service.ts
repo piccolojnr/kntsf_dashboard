@@ -33,22 +33,27 @@ export async function getAll(params: {
   page?: number
   pageSize?: number
   search?: string
+  level?: string
+  course?: string
 }): Promise<PaginatedResponse<Student>> {
   try {
-    const { page = 1, pageSize = 10, search } = params
-    const where: Prisma.StudentWhereInput = search
-      ? {
-        OR: [
-          { name: { contains: search } },
-          { studentId: { contains: search } },
-          { email: { contains: search } },
-          { course: { contains: search } }
-        ],
-        deletedAt: null,
-      }
-      : {
-        deletedAt: null,
-      }
+    const { page = 1, pageSize = 10, search, level, course } = params
+
+    const where: Prisma.StudentWhereInput = {
+      deletedAt: null,
+      ...(search
+        ? {
+          OR: [
+            { name: { contains: search } },
+            { studentId: { contains: search } },
+            { email: { contains: search } },
+            { course: { contains: search } },
+          ],
+        }
+        : {}),
+      ...(level ? { level: level } : {}),
+      ...(course ? { course: course } : {}),
+    }
     const skip = Math.max((page - 1) * pageSize, 0)
     const [total, students] = await Promise.all([
       prisma.student.count({ where }),
@@ -75,6 +80,36 @@ export async function getAll(params: {
     // if (error instanceof Error) {
     //   return { success: false, error: error.message }
     // }
+    return handleError(error)
+  }
+}
+
+export async function getDistinctFilters(): Promise<ServiceResponse<{ levels: string[]; courses: string[] }>> {
+  try {
+    const [levelsRaw, coursesRaw] = await Promise.all([
+      prisma.student.groupBy({
+        by: ['level'],
+        where: { deletedAt: null },
+      }),
+      prisma.student.groupBy({
+        by: ['course'],
+        where: { deletedAt: null },
+      }),
+    ])
+
+    const levels = levelsRaw
+      .map((r) => r.level)
+      .filter((v): v is string => !!v)
+      .sort()
+
+    const courses = coursesRaw
+      .map((r) => r.course)
+      .filter((v): v is string => !!v)
+      .sort()
+
+    return { success: true, data: { levels, courses } }
+  } catch (error) {
+    log.error('Failed to get distinct student filters:', error)
     return handleError(error)
   }
 }

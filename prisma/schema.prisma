@@ -197,14 +197,15 @@ model SemesterConfig {
 }
 
 model PermitConfig {
-  id             Int      @id @default(autoincrement())
-  expirationDate DateTime @default(now())
-  defaultAmount  Float    @default(0.0)
-  currency       String   @default("GHS")
-  config         Config   @relation(fields: [configId], references: [id])
-  configId       Int      @unique
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  expirationDate      DateTime @default(now())
+  defaultAmount       Float    @default(0.0)
+  currency            String   @default("GHS")
+  enablePermitRequest Boolean  @default(false)
+  config              Config   @relation(fields: [configId], references: [id])
+  configId            Int      @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model NewsletterSubscriber {

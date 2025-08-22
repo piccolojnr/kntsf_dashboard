@@ -34,6 +34,7 @@ export interface SemesterConfigUpdateData {
 }
 
 export interface PermitConfigUpdateData {
+    enablePermitRequest: boolean
     expirationDate: Date
     defaultAmount: number
     currency: string
@@ -61,6 +62,7 @@ export interface PublicConfig {
         isActive: boolean
     } | null
     permitConfig: {
+        enablePermitRequest: boolean
         defaultAmount: number
         currency: string
     } | null
@@ -127,6 +129,7 @@ export async function getPublicConfig(): Promise<ServiceResponse<PublicConfig>> 
                 isActive: config.semesterConfig.isActive
             } : null,
             permitConfig: config.permitConfig ? {
+                enablePermitRequest: config.permitConfig.enablePermitRequest,
                 defaultAmount: config.permitConfig.defaultAmount,
                 currency: config.permitConfig.currency
             } : null

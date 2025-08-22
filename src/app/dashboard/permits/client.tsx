@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { Mail, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import CreatePermitForm from "@/components/app/permit/create-permit-form";
+import { ResendPermitModal } from "@/components/app/permit/resend-permit-modal";
 import { toast } from "sonner";
 import { MyPagination } from "@/components/common/my-pagination";
 import services from "@/lib/services";
@@ -49,24 +50,25 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [issuedByFilter, setIssuedByFilter] = useState<string>("");
   const [isResendDialogOpen, setIsResendDialogOpen] = useState(false);
   const [resendPermitId, setResendPermitId] = useState<number | null>(null);
   const [resendEmail, setResendEmail] = useState<string>("");
-  const [isResending, setIsResending] = useState(false);
-
+  const [resendPhone, setResendPhone] = useState<string>("");
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
 
   const { data: permitsData, isLoading } = useQuery({
-    queryKey: ["permits", currentPage, debouncedSearch, statusFilter],
+    queryKey: ["permits", currentPage, debouncedSearch, statusFilter, issuedByFilter, pageSize],
     queryFn: async () => {
       const response = await services.permit.getAll({
         page: currentPage,
         pageSize,
         search: debouncedSearch,
         status: statusFilter,
+        issuedBy: issuedByFilter,
       });
       if (!response.success) {
         throw new Error(response.error || "Failed to load permits");
@@ -75,34 +77,32 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
     },
   });
 
+  // Get unique issuers for the filter
+  const { data: issuersData } = useQuery({
+    queryKey: ["unique-issuers"],
+    queryFn: async () => {
+      const response = await services.permit.getUniqueIssuers();
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load issuers");
+      }
+      return response.data;
+    },
+  });
+
+  const uniqueIssuers = useMemo(() => {
+    if (!issuersData) return [];
+    return issuersData;
+  }, [issuersData]);
+
   const openResendDialog = useCallback((permitId: number) => {
     setResendPermitId(permitId);
     const permit = permitsData?.data.find((p) => p.id === permitId);
     setResendEmail(permit?.student.email ?? "");
+    setResendPhone(permit?.student.number ?? "");
     setIsResendDialogOpen(true);
   }, [permitsData?.data]);
 
-  async function handleConfirmResend() {
-    if (!resendPermitId) return;
-    try {
-      setIsResending(true);
-      const response = await services.permit.resendPermitEmail(resendPermitId, resendEmail);
-      if (response.success) {
-        toast.success("Permit email resent successfully");
-        setIsResendDialogOpen(false);
-        setResendPermitId(null);
-        setResendEmail("");
-        queryClient.invalidateQueries({ queryKey: ["permits"] });
-      } else {
-        toast.error(response.error || "Failed to resend permit email");
-      }
-    } catch (error) {
-      console.error("Error resending permit email:", error);
-      toast.error("Failed to resend permit email");
-    } finally {
-      setIsResending(false);
-    }
-  }
+
 
   const handleRevoke = useCallback(
     async (permitId: number) => {
@@ -181,10 +181,26 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
+    // Reset filters when searching
+    if (query !== searchQuery) {
+      setStatusFilter("");
+      setIssuedByFilter("");
+    }
+  }, [searchQuery]);
+
+  const resetFilters = useCallback(() => {
+    setStatusFilter("");
+    setIssuedByFilter("");
+    setCurrentPage(1);
   }, []);
 
   const handleStatusChange = useCallback((value: string) => {
     setStatusFilter(value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleIssuedByChange = useCallback((value: string) => {
+    setIssuedByFilter(value);
     setCurrentPage(1);
   }, []);
 
@@ -213,6 +229,29 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={issuedByFilter} onValueChange={handleIssuedByChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by issuer" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Issuers</SelectItem>
+              {uniqueIssuers.map((issuer: string) => (
+                <SelectItem key={issuer} value={issuer}>
+                  {issuer}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(statusFilter || issuedByFilter) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetFilters}
+              className="text-xs"
+            >
+              Clear Filters
+            </Button>
+          )}
           {permissions.isExecutive && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -321,7 +360,12 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                   return (
                     <TableRow key={permit.id}>
                       <TableCell className="font-medium">
-                        {permit.originalCode}
+                        <Link
+                          href={`/dashboard/permits/${permit.id}`}
+                          className="text-blue-600 hover:underline font-mono"
+                        >
+                          {permit.originalCode}
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <Link
@@ -399,37 +443,20 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
       <MyPagination
         currentPage={currentPage}
         totalPages={permitsData?.totalPages || 1}
+        totalItems={permitsData?.total || 0}
         onPageChange={setCurrentPage}
+        itemsPerPage={pageSize}
+        onItemsPerPageChange={setPageSize}
       />
 
       {/* Resend Permit Modal */}
-      <Dialog open={isResendDialogOpen} onOpenChange={setIsResendDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Resend Permit Email</DialogTitle>
-            <DialogDescription>
-              Update the student&apos;s email if needed, then resend the permit and receipt emails.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Student Email</label>
-              <Input
-                type="email"
-                placeholder="student@example.com"
-                value={resendEmail}
-                onChange={(e) => setResendEmail(e.target.value)}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsResendDialogOpen(false)} disabled={isResending}>Cancel</Button>
-              <Button onClick={handleConfirmResend} disabled={isResending || !resendPermitId}>
-                {isResending ? "Resending..." : "Resend"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ResendPermitModal
+        isOpen={isResendDialogOpen}
+        onClose={() => setIsResendDialogOpen(false)}
+        permitId={resendPermitId || 0}
+        currentEmail={resendEmail}
+        currentPhone={resendPhone}
+      />
     </div>
   );
 }

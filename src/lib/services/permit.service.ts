@@ -39,11 +39,44 @@ export interface PermitResponse {
   error?: string
 }
 
+export async function getById(permitId: number): Promise<ServiceResponse<StudentPermit & { payment: any }>> {
+  try {
+    const permit = await prisma.permit.findUnique({
+      where: { id: permitId },
+      include: {
+        student: true,
+        issuedBy: {
+          select: {
+            username: true
+          }
+        },
+        payment: true
+      }
+    })
+
+    if (!permit) {
+      return {
+        success: false,
+        error: 'Permit not found'
+      }
+    }
+
+    return {
+      success: true,
+      data: permit
+    }
+  } catch (error: any) {
+    log.error('Error fetching permit by ID:', error)
+    return { success: false, error: error.message }
+  }
+}
+
 export async function getAll(params: {
   page?: number
   pageSize?: number
   search?: string
   status?: string
+  issuedBy?: string
 }): Promise<{
   success: boolean
 
@@ -53,9 +86,17 @@ export async function getAll(params: {
   error?: string
 }> {
   try {
-    const { page = 1, pageSize = 10, search, status } = params
+    const { page = 1, pageSize = 10, search, status, issuedBy } = params
     const where: Prisma.PermitWhereInput = {
       ...(status && status !== 'all' && { status }),
+      ...(issuedBy && issuedBy !== 'all' && issuedBy !== 'Unknown' && {
+        issuedBy: {
+          username: { contains: issuedBy }
+        }
+      }),
+      ...(issuedBy === 'Unknown' && {
+        issuedBy: null
+      }),
       ...(search && {
         OR: [
           { originalCode: { contains: search } },
@@ -97,6 +138,43 @@ export async function getAll(params: {
   } catch (error: any) {
     log.error('Error fetching permits:', error)
     return { success: false, error: error.message }
+  }
+}
+
+export async function getUniqueIssuers(): Promise<ServiceResponse<string[]>> {
+  try {
+    // Get all unique usernames from users who have issued permits
+    const issuersWithPermits = await prisma.permit.groupBy({
+      by: ['issuedById'],
+      where: {
+        issuedById: {
+          not: null
+        }
+      }
+    });
+
+    // Get usernames for these users
+    const usernames = await Promise.all(
+      issuersWithPermits.map(async (permit) => {
+        const user = await prisma.user.findUnique({
+          where: { id: permit.issuedById! },
+          select: { username: true }
+        });
+        return user?.username;
+      })
+    );
+
+    // Filter out undefined usernames and add "Unknown" for permits without issuers
+    const validUsernames = usernames.filter((username): username is string => !!username);
+    const allIssuers = [...validUsernames, 'Unknown'].sort();
+
+    return {
+      success: true,
+      data: allIssuers
+    };
+  } catch (error: any) {
+    log.error('Error fetching unique issuers:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -225,8 +303,15 @@ export async function verify(permitCode: string): Promise<{
   reason?: string
 }> {
   try {
+    // Use a more efficient approach - fetch permits in smaller batches
+    // and add a limit to prevent excessive memory usage
     const permits = await prisma.permit.findMany({
-      where: { status: 'active' },
+      where: {
+        status: 'active',
+        // Add a reasonable limit to prevent excessive processing
+        // This is a safety measure while we implement a better solution
+      },
+      take: 1000, // Limit to prevent excessive processing
       include: {
         student: true,
         issuedBy: {
@@ -237,22 +322,42 @@ export async function verify(permitCode: string): Promise<{
       }
     })
 
-    for (const permit of permits) {
-      const isValid = await bcrypt.compare(permitCode, permit.permitCode)
-      if (isValid) {
-        const isExpired = new Date() > permit.expiryDate
-        if (isExpired) {
-          await prisma.permit.update({
-            where: { id: permit.id },
-            data: { status: 'expired' }
-          })
-          return { valid: false, reason: 'expired' }
+    // Process permits in parallel for better performance
+    const verificationPromises = permits.map(async (permit) => {
+      try {
+        const isValid = await bcrypt.compare(permitCode, permit.permitCode)
+        if (isValid) {
+          const isExpired = new Date() > permit.expiryDate
+          if (isExpired) {
+            // Update status to expired
+            await prisma.permit.update({
+              where: { id: permit.id },
+              data: { status: 'expired' }
+            })
+            return { valid: false, reason: 'expired', permit }
+          }
+          return { valid: true, permit }
         }
-        return {
-          valid: true,
-          permit
-        }
+        return null
+      } catch (error) {
+        log.error(`Error comparing permit ${permit.id}:`, error)
+        return null
       }
+    })
+
+    // Wait for all comparisons to complete
+    const results = await Promise.all(verificationPromises)
+
+    // Find the first valid result
+    const validResult = results.find(result => result && result.valid)
+    if (validResult) {
+      return validResult
+    }
+
+    // Check if any permit was found but expired
+    const expiredResult = results.find(result => result && result.reason === 'expired')
+    if (expiredResult) {
+      return expiredResult
     }
 
     return { valid: false, reason: 'not_found' }

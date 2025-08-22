@@ -59,12 +59,16 @@ model Student {
   deletedAt   DateTime? // Soft delete
   StudentIdea StudentIdea[]
   GameUser    GameUser?
+
+  @@index([studentId])
+  @@index([email])
 }
 
 model Permit {
   id           Int      @id @default(autoincrement())
   permitCode   String   @unique // Hashed permit code
   originalCode String   @unique // Original permit code
+  permitHash   String? // Hash of the permit code for efficient lookup
   status       String   @default("active") // active, revoked, expired
   startDate    DateTime @default(now())
   expiryDate   DateTime
@@ -76,6 +80,9 @@ model Permit {
   payment      Payment? // Payment record for this permit
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([permitCode, status])
+  @@index([permitHash, status])
 }
 
 model AuditLog {

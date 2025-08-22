@@ -8,6 +8,7 @@ interface MyPaginationProps {
   onPageChange: (page: number) => void;
   itemsPerPage?: number;
   onItemsPerPageChange?: (itemsPerPage: number) => void;
+  totalItems?: number;
 }
 
 export function MyPagination({
@@ -16,6 +17,7 @@ export function MyPagination({
   onPageChange,
   itemsPerPage = 10,
   onItemsPerPageChange,
+  totalItems,
 }: MyPaginationProps) {
   return (
     <DataTablePagination
@@ -26,6 +28,8 @@ export function MyPagination({
       onItemsPerPageChange={
         onItemsPerPageChange ? (size) => onItemsPerPageChange(size) : undefined
       }
+      totalItems={totalItems }
+
     />
   );
 }

@@ -50,18 +50,19 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [issuedByFilter, setIssuedByFilter] = useState<string>("");
   const [isResendDialogOpen, setIsResendDialogOpen] = useState(false);
   const [resendPermitId, setResendPermitId] = useState<number | null>(null);
   const [resendEmail, setResendEmail] = useState<string>("");
   const [resendPhone, setResendPhone] = useState<string>("");
+
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
 
   const { data: permitsData, isLoading } = useQuery({
-    queryKey: ["permits", currentPage, debouncedSearch, statusFilter, issuedByFilter, pageSize],
+    queryKey: ["permits", currentPage, debouncedSearch, statusFilter, issuedByFilter],
     queryFn: async () => {
       const response = await services.permit.getAll({
         page: currentPage,
@@ -95,11 +96,15 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   }, [issuersData]);
 
   const openResendDialog = useCallback((permitId: number) => {
-    setResendPermitId(permitId);
     const permit = permitsData?.data.find((p) => p.id === permitId);
-    setResendEmail(permit?.student.email ?? "");
-    setResendPhone(permit?.student.number ?? "");
-    setIsResendDialogOpen(true);
+    if (permit) {
+      // Set all state values first
+      setResendPermitId(permitId);
+      setResendEmail(permit.student.email ?? "");
+      setResendPhone(permit.student.number ?? "");
+      // Open modal after state is set
+      setIsResendDialogOpen(true);
+    }
   }, [permitsData?.data]);
 
 
@@ -235,7 +240,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Issuers</SelectItem>
-              {uniqueIssuers.map((issuer: string) => (
+              {uniqueIssuers.map((issuer) => (
                 <SelectItem key={issuer} value={issuer}>
                   {issuer}
                 </SelectItem>
@@ -443,10 +448,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
       <MyPagination
         currentPage={currentPage}
         totalPages={permitsData?.totalPages || 1}
-        totalItems={permitsData?.total || 0}
         onPageChange={setCurrentPage}
-        itemsPerPage={pageSize}
-        onItemsPerPageChange={setPageSize}
       />
 
       {/* Resend Permit Modal */}

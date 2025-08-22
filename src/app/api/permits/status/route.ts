@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verify, checkValidity } from "@/lib/services/permit.service";
+import { verify, checkValidity, getPermitByCode } from "@/lib/services/permit.service";
 import { getById } from "@/lib/services/student.service";
+import prisma from "@/lib/prisma/client";
 
 export async function GET(request: NextRequest) {
     try {
@@ -19,7 +20,41 @@ export async function GET(request: NextRequest) {
         }
 
         if (permitCode) {
-            // Check permit status by code
+            // OPTIMIZATION: Use fast lookup first, then verify if needed
+            const permitResult = await getPermitByCode(permitCode);
+
+            if (permitResult.success && permitResult.data) {
+                const permit = permitResult.data;
+                const isExpired = new Date() > permit.expiryDate;
+
+                if (isExpired) {
+                    // Update status to expired
+                    await prisma.permit.update({
+                        where: { id: permit.id },
+                        data: { status: 'expired' }
+                    });
+
+                    return NextResponse.json({
+                        success: true,
+                        data: {
+                            valid: false,
+                            permit: permit,
+                            reason: 'expired',
+                        },
+                    });
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    data: {
+                        valid: true,
+                        permit: permit,
+                        reason: undefined,
+                    },
+                });
+            }
+
+            // Fallback to old verification method if fast lookup fails
             const result = await verify(permitCode);
             return NextResponse.json({
                 success: true,

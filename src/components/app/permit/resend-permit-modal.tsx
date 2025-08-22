@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,12 @@ export function ResendPermitModal({
   const [email, setEmail] = useState(currentEmail || "");
   const [phone, setPhone] = useState(currentPhone || "");
   const [isResending, setIsResending] = useState(false);
+
+  // Update local state when props change
+  useEffect(() => {
+    setEmail(currentEmail || "");
+    setPhone(currentPhone || "");
+  }, [currentEmail, currentPhone]);
 
   const handleConfirmResend = async () => {
     try {

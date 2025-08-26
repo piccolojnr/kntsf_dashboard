@@ -53,6 +53,8 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const [pageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [issuedByFilter, setIssuedByFilter] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"all" | "duplicates" | "expiring">("all");
+  const [expiringDays, setExpiringDays] = useState<number>(30);
   const [isResendDialogOpen, setIsResendDialogOpen] = useState(false);
   const [resendPermitId, setResendPermitId] = useState<number | null>(null);
   const [resendEmail, setResendEmail] = useState<string>("");
@@ -62,8 +64,33 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const queryClient = useQueryClient();
 
   const { data: permitsData, isLoading } = useQuery({
-    queryKey: ["permits", currentPage, debouncedSearch, statusFilter, issuedByFilter],
+    queryKey: [
+      "permits",
+      viewMode,
+      currentPage,
+      debouncedSearch,
+      statusFilter,
+      issuedByFilter,
+      expiringDays,
+    ],
     queryFn: async () => {
+      if (viewMode === "duplicates") {
+        const res = await services.permit.getDuplicates({
+          page: currentPage,
+          pageSize,
+        });
+        if (!res.success) throw new Error(res.error || "Failed to load duplicates");
+        return res.data;
+      }
+      if (viewMode === "expiring") {
+        const res = await services.permit.getExpiringSoon({
+          days: expiringDays,
+          page: currentPage,
+          pageSize,
+        });
+        if (!res.success) throw new Error(res.error || "Failed to load expiring permits");
+        return res.data;
+      }
       const response = await services.permit.getAll({
         page: currentPage,
         pageSize,
@@ -209,11 +236,47 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
     setCurrentPage(1);
   }, []);
 
+  const handleViewModeChange = useCallback((value: "all" | "duplicates" | "expiring") => {
+    setViewMode(value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleExpiringDaysChange = useCallback((value: string) => {
+    const parsed = parseInt(value, 10);
+    setExpiringDays(Number.isNaN(parsed) ? 30 : parsed);
+    setCurrentPage(1);
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Permits</h2>
         <div className="flex items-center gap-2">
+          {/* View mode selector */}
+          <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as any)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="View" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="duplicates">Duplicates</SelectItem>
+              <SelectItem value="expiring">Expiring Soon</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {viewMode === "expiring" && (
+            <Select value={String(expiringDays)} onValueChange={handleExpiringDaysChange}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Days" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">In 7 days</SelectItem>
+                <SelectItem value="14">In 14 days</SelectItem>
+                <SelectItem value="30">In 30 days</SelectItem>
+                <SelectItem value="60">In 60 days</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -223,7 +286,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               onChange={(e) => handleSearchChange(e.target.value)}
             />
           </div>
-          <Select value={statusFilter} onValueChange={handleStatusChange}>
+          <Select value={statusFilter} onValueChange={handleStatusChange} disabled={viewMode !== "all"}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -234,7 +297,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={issuedByFilter} onValueChange={handleIssuedByChange}>
+          <Select value={issuedByFilter} onValueChange={handleIssuedByChange} disabled={viewMode !== "all"}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by issuer" />
             </SelectTrigger>
@@ -247,7 +310,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               ))}
             </SelectContent>
           </Select>
-          {(statusFilter || issuedByFilter) && (
+          {viewMode === "all" && (statusFilter || issuedByFilter) && (
             <Button
               variant="outline"
               size="sm"
@@ -423,6 +486,33 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                               title="Delete Permit"
                             >
                               <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {permit.status === "revoked" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!permissions.isExecutive) {
+                                  toast.error("You don't have permission to reactivate permits");
+                                  return;
+                                }
+                                try {
+                                  const res = await services.permit.reactivate(permit.id);
+                                  if (res.success) {
+                                    toast.success("Permit reactivated successfully");
+                                    queryClient.invalidateQueries({ queryKey: ["permits"] });
+                                  } else {
+                                    toast.error(res.error || "Failed to reactivate permit");
+                                  }
+                                } catch (e) {
+                                  console.error(e);
+                                  toast.error("Failed to reactivate permit");
+                                }
+                              }}
+                              title="Reactivate Permit"
+                            >
+                              Reactivate
                             </Button>
                           )}
                           {permit.status !== "revoked" && (

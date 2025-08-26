@@ -182,6 +182,136 @@ export async function getUniqueIssuers(): Promise<ServiceResponse<string[]>> {
   }
 }
 
+// Find duplicate permits: same studentId with identical startDate and expiryDate
+export async function getDuplicates(params: {
+  page?: number
+  pageSize?: number
+}): Promise<ServiceResponse<PaginatedResponse<StudentPermit>>> {
+  try {
+    const { page = 1, pageSize = 10 } = params
+
+    // MySQL-compatible raw queries for duplicate groups and total count
+    const skip = Math.max((page - 1) * pageSize, 0)
+
+    const totalRows = await prisma.$queryRaw<Array<{ total: bigint | number }>>`
+      SELECT COUNT(*) AS total FROM (
+        SELECT 1
+        FROM Permit
+        GROUP BY studentId, startDate, expiryDate
+        HAVING COUNT(*) > 1
+      ) AS dup
+    `
+    const totalVal = totalRows?.[0]?.total ?? 0
+    const total = typeof totalVal === 'bigint' ? Number(totalVal) : (totalVal as number)
+    const totalPages = Math.ceil(total / pageSize)
+
+    const groupsPage = await prisma.$queryRaw<Array<{ studentId: number; startDate: Date; expiryDate: Date; cnt: bigint | number }>>`
+      SELECT studentId, startDate, expiryDate, COUNT(*) AS cnt
+      FROM Permit
+      GROUP BY studentId, startDate, expiryDate
+      HAVING COUNT(*) > 1
+      ORDER BY startDate DESC, expiryDate DESC
+      LIMIT ${pageSize} OFFSET ${skip}
+    `
+
+    if (!groupsPage || groupsPage.length === 0) {
+      return {
+        success: true,
+        data: {
+          data: [],
+          total: total,
+          page,
+          pageSize,
+          totalPages
+        }
+      }
+    }
+
+    // Build OR conditions for the paged groups and fetch matching permits
+    const orConditions: Prisma.PermitWhereInput[] = groupsPage.map((g) => ({
+      AND: [
+        { studentId: g.studentId },
+        { startDate: new Date(g.startDate) },
+        { expiryDate: new Date(g.expiryDate) }
+      ]
+    }))
+
+    const permits = await prisma.permit.findMany({
+      where: { OR: orConditions },
+      include: {
+        student: true,
+        issuedBy: {
+          select: { username: true }
+        }
+      },
+      orderBy: [{ startDate: 'desc' }, { expiryDate: 'desc' }]
+    })
+
+    return {
+      success: true,
+      data: {
+        data: permits,
+        total: total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
+  } catch (error: any) {
+    log.error('Error fetching duplicate permits:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Permits expiring within N days (default 30)
+export async function getExpiringSoon(params: {
+  days?: number
+  page?: number
+  pageSize?: number
+}): Promise<ServiceResponse<PaginatedResponse<StudentPermit>>> {
+  try {
+    const { days = 30, page = 1, pageSize = 10 } = params
+    const now = new Date()
+    const until = new Date(now.getTime() + days * 24 * 60 * 60 * 1000)
+
+    const where: Prisma.PermitWhereInput = {
+      expiryDate: { lte: until, gte: now },
+      status: 'active'
+    }
+
+    const skip = Math.max((page - 1) * pageSize, 0)
+    const [total, permits] = await Promise.all([
+      prisma.permit.count({ where }),
+      prisma.permit.findMany({
+        where,
+        skip,
+        take: pageSize,
+        include: {
+          student: true,
+          issuedBy: {
+            select: { username: true }
+          }
+        },
+        orderBy: { expiryDate: 'asc' }
+      })
+    ])
+
+    return {
+      success: true,
+      data: {
+        data: permits,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    }
+  } catch (error: any) {
+    log.error('Error fetching expiring permits:', error)
+    return { success: false, error: error.message }
+  }
+}
+
 export async function create(permitData: PermitData): Promise<PermitResponse> {
   try {
     const session = await getSession()
@@ -516,6 +646,58 @@ export async function deletePermit(permitId: number): Promise<ServiceResponse<{ 
     }
   } catch (error: any) {
     log.error('Error deleting permit:', error)
+    return handleError(error)
+  }
+}
+
+export async function reactivate(permitId: number): Promise<ServiceResponse<StudentPermit>> {
+  try {
+    const permit = await prisma.permit.findUnique({
+      where: { id: permitId },
+      include: {
+        student: true,
+        issuedBy: {
+          select: { username: true }
+        },
+        payment: true
+      }
+    })
+
+    if (!permit) {
+      return { success: false, error: 'Permit not found' }
+    }
+
+    if (permit.status !== 'revoked') {
+      return { success: false, error: 'Only revoked permits can be reactivated' }
+    }
+
+    // Reactivate the permit
+    const updatedPermit = await prisma.permit.update({
+      where: { id: permitId },
+      data: { status: 'active' },
+      include: {
+        student: true,
+        issuedBy: {
+          select: { username: true }
+        }
+      }
+    })
+
+    // Restore associated payment if it exists
+    if (permit.payment && permit.payment.status === 'CANCELLED') {
+      await prisma.payment.update({
+        where: { id: permit.payment.id },
+        data: { status: 'SUCCESS' }
+      })
+    }
+
+    // Invalidate cache for this permit
+    const cacheKey = `permit_${permit.originalCode}`
+    permitCache.delete(cacheKey)
+
+    return { success: true, data: updatedPermit }
+  } catch (error: any) {
+    log.error('Error reactivating permit:', error)
     return handleError(error)
   }
 }

@@ -132,7 +132,8 @@ model NewsArticle {
   slug          String    @unique
   content       String    @db.Text
   excerpt       String    @db.Text
-  image         String // Cloudinary URL
+  image         String // Primary/featured image - Cloudinary URL
+  images        Json? // Array of additional images with metadata
   category      String // News category (e.g., "Announcements", "Updates", "Education", "Academic")
   categoryColor String // Tailwind classes
   featured      Boolean   @default(false)
@@ -151,7 +152,8 @@ model Event {
   slug             String    @unique
   description      String    @db.Text
   excerpt          String    @db.Text
-  image            String // Cloudinary URL
+  image            String // Primary/featured image - Cloudinary URL
+  images           Json? // Array of additional images with metadata
   date             DateTime
   time             String // Store time as string (e.g., "14:00")
   location         String

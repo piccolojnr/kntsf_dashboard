@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createEvent, updateEvent } from "@/lib/services/events.service";
-import { ImageUpload } from "@/components/common/image-upload";
+import { MultipleImageUpload } from "@/components/common/multiple-image-upload";
 import { Loader2 } from "lucide-react";
 import {
   Select,
@@ -69,7 +69,11 @@ const eventSchema = z.object({
 type EventFormValues = z.infer<typeof eventSchema>;
 
 interface EventFormProps {
-  initialData?: EventFormValues & { id?: number; image?: string };
+  initialData?: EventFormValues & {
+    id?: number;
+    image?: string;
+    images?: any[];
+  };
 }
 
 const CATEGORY_COLORS = [
@@ -88,7 +92,7 @@ const CATEGORY_COLORS = [
 
 export function EventForm({ initialData }: EventFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const router = useRouter();
 
   const form = useForm<EventFormValues>({
@@ -112,9 +116,9 @@ export function EventForm({ initialData }: EventFormProps) {
     try {
       setIsLoading(true);
 
-      // Validate image for new events
-      if (!initialData && !imageFile) {
-        toast.error("Please upload an image for the event");
+      // Validate images for new events
+      if (!initialData && imageFiles.length === 0) {
+        toast.error("Please upload at least one image for the event");
         return;
       }
 
@@ -124,15 +128,15 @@ export function EventForm({ initialData }: EventFormProps) {
         result = await updateEvent(
           initialData.id,
           data as any,
-          imageFile || undefined
+          imageFiles.length > 0 ? imageFiles : undefined
         );
       } else {
         // Create new event
-        if (!imageFile) {
-          toast.error("Please upload an image for the event");
+        if (imageFiles.length === 0) {
+          toast.error("Please upload at least one image for the event");
           return;
         }
-        result = await createEvent(data as any, imageFile);
+        result = await createEvent(data as any, imageFiles);
       }
 
       if (result.success) {
@@ -426,19 +430,21 @@ export function EventForm({ initialData }: EventFormProps) {
             {/* Image Upload */}
             <Card>
               <CardHeader>
-                <CardTitle>Event Image</CardTitle>
+                <CardTitle>Event Images</CardTitle>
               </CardHeader>
               <CardContent>
                 <FormItem>
-                  <FormLabel>Featured Image</FormLabel>
+                  <FormLabel>Images (Max 5)</FormLabel>
                   <FormControl>
-                    <ImageUpload
-                      value={initialData?.image}
-                      onChange={(file) => setImageFile(file)}
+                    <MultipleImageUpload
+                      value={initialData?.image ? [initialData.image] : []}
+                      onChange={(files) => setImageFiles(files)}
+                      maxImages={5}
                     />
                   </FormControl>
                   <FormDescription>
-                    Upload a high-quality image that represents your event
+                    Upload high-quality images. First image will be the featured
+                    image.
                   </FormDescription>
                 </FormItem>
               </CardContent>

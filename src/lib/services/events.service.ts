@@ -30,9 +30,50 @@ export interface EventWithOrganizer extends Event {
     }
 }
 
+interface ImageUploadResult {
+    url: string
+    publicId: string
+}
+
+async function uploadImageToCloudinary(file: File, folder: string): Promise<ImageUploadResult> {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader
+            .upload_stream(
+                {
+                    folder,
+                    public_id: `${folder}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    transformation: [{ width: 1200, height: 630, crop: "fill", quality: "auto" }],
+                },
+                (error, result) => {
+                    if (error) {
+                        log.error("Cloudinary upload error:", error)
+                        reject(error)
+                    } else {
+                        resolve(result)
+                    }
+                },
+            )
+            .end(buffer)
+    })
+
+    return {
+        url: uploadResult.secure_url,
+        publicId: uploadResult.public_id
+    }
+}
+
+async function deleteImageFromCloudinary(publicId: string): Promise<void> {
+    try {
+        await cloudinary.uploader.destroy(publicId)
+    } catch (error) {
+        log.error("Failed to delete image from Cloudinary:", error)
+    }
+}
+
 export async function createEvent(
     eventData: EventData,
-    imageFile: File,
+    imageFiles: File[], // Changed to array
 ): Promise<ServiceResponse<Event>> {
     try {
         const session = await getSession()
@@ -45,42 +86,41 @@ export async function createEvent(
             return { success: false, error: "Invalid user session" }
         }
 
-        // Validate image file
-        if (!imageFile || imageFile.size === 0) {
-            return { success: false, error: "Image file is required" }
+        // Validate at least one image
+        if (!imageFiles || imageFiles.length === 0) {
+            return { success: false, error: "At least one image is required" }
         }
 
-        // Check file size (max 5MB)
-        if (imageFile.size > 5 * 1024 * 1024) {
-            return { success: false, error: "Image file must be less than 5MB" }
+        // Validate image files
+        const maxImages = 5
+        if (imageFiles.length > maxImages) {
+            return { success: false, error: `Maximum ${maxImages} images allowed` }
         }
 
-        // Check file type
-        if (!imageFile.type.startsWith("image/")) {
-            return { success: false, error: "File must be an image" }
+        // Check each file
+        for (const file of imageFiles) {
+            if (file.size > 5 * 1024 * 1024) {
+                return { success: false, error: "Each image must be less than 5MB" }
+            }
+            if (!file.type.startsWith("image/")) {
+                return { success: false, error: "All files must be images" }
+            }
         }
 
-        // Upload image to Cloudinary
-        const buffer = Buffer.from(await imageFile.arrayBuffer())
-        const uploadResult = await new Promise<any>((resolve, reject) => {
-            cloudinary.uploader
-                .upload_stream(
-                    {
-                        folder: "events",
-                        public_id: `event_${Date.now()}`,
-                        transformation: [{ width: 1200, height: 630, crop: "fill", quality: "auto" }],
-                    },
-                    (error, result) => {
-                        if (error) {
-                            log.error("Cloudinary upload error:", error)
-                            reject(error)
-                        } else {
-                            resolve(result)
-                        }
-                    },
-                )
-                .end(buffer)
-        })
+        // Upload all images to Cloudinary
+        const imageUploads = await Promise.all(
+            imageFiles.map(file => uploadImageToCloudinary(file, "events"))
+        )
+
+        // First image is the featured image
+        const featuredImage = imageUploads[0]
+
+        // Additional images metadata
+        const additionalImages = imageUploads.slice(1).map((upload, index) => ({
+            url: upload.url,
+            publicId: upload.publicId,
+            order: index + 1
+        }))
 
         // Create unique slug from title
         let slug = slugify(eventData.title, { lower: true, strict: true })
@@ -100,7 +140,8 @@ export async function createEvent(
                 slug,
                 date: new Date(eventData.date),
                 time: eventData.time,
-                image: uploadResult.secure_url,
+                image: featuredImage.url,
+                images: additionalImages.length > 0 ? additionalImages : undefined,
                 organizerId: Number.parseInt(organizerId),
                 publishedAt: eventData.published ? new Date() : null,
                 currentAttendees: 0,
@@ -118,7 +159,7 @@ export async function createEvent(
 export async function updateEvent(
     eventId: number,
     eventData: Partial<EventData>,
-    imageFile?: File,
+    imageFiles?: File[], // Changed to array
 ): Promise<ServiceResponse<Event>> {
     try {
         const session = await getSession()
@@ -137,49 +178,68 @@ export async function updateEvent(
 
         const updateData: any = { ...eventData }
 
-        // Handle image upload if provided
-        if (imageFile) {
-            // Validate image file
-            if (imageFile.size > 5 * 1024 * 1024) {
-                return { success: false, error: "Image file must be less than 5MB" }
+        // Handle image uploads if provided
+        if (imageFiles && imageFiles.length > 0) {
+            // Validate image files
+            const maxImages = 5
+            if (imageFiles.length > maxImages) {
+                return { success: false, error: `Maximum ${maxImages} images allowed` }
             }
 
-            if (!imageFile.type.startsWith("image/")) {
-                return { success: false, error: "File must be an image" }
+            // Check each file
+            for (const file of imageFiles) {
+                if (file.size > 5 * 1024 * 1024) {
+                    return { success: false, error: "Each image must be less than 5MB" }
+                }
+                if (!file.type.startsWith("image/")) {
+                    return { success: false, error: "All files must be images" }
+                }
             }
 
-            const buffer = Buffer.from(await imageFile.arrayBuffer())
-            const uploadResult = await new Promise<any>((resolve, reject) => {
-                cloudinary.uploader
-                    .upload_stream(
-                        {
-                            folder: "events",
-                            public_id: `event_${eventId}_${Date.now()}`,
-                            transformation: [{ width: 1200, height: 630, crop: "fill", quality: "auto" }],
-                        },
-                        (error, result) => {
-                            if (error) {
-                                log.error("Cloudinary upload error:", error)
-                                reject(error)
-                            } else {
-                                resolve(result)
-                            }
-                        },
-                    )
-                    .end(buffer)
-            })
+            // Upload all new images to Cloudinary
+            const imageUploads = await Promise.all(
+                imageFiles.map(file => uploadImageToCloudinary(file, "events"))
+            )
 
-            updateData.image = uploadResult.secure_url
+            // First image is the featured image
+            const featuredImage = imageUploads[0]
 
-            // Delete old image from Cloudinary
+            // Additional images metadata
+            const additionalImages = imageUploads.slice(1).map((upload, index) => ({
+                url: upload.url,
+                publicId: upload.publicId,
+                order: index + 1
+            }))
+
+            updateData.image = featuredImage.url
+            updateData.images = additionalImages.length > 0 ? additionalImages : undefined
+
+            // Delete old images from Cloudinary
             if (existingEvent.image) {
                 try {
                     const publicId = existingEvent.image.split("/").pop()?.split(".")[0]
                     if (publicId) {
-                        await cloudinary.uploader.destroy(`events/${publicId}`)
+                        await deleteImageFromCloudinary(`events/${publicId}`)
                     }
                 } catch (error) {
-                    log.warn("Failed to delete old image from Cloudinary:", error)
+                    log.warn("Failed to delete old featured image from Cloudinary:", error)
+                }
+            }
+
+            // Delete old additional images
+            if (existingEvent.images) {
+                try {
+                    const oldImages = Array.isArray(existingEvent.images)
+                        ? existingEvent.images as any[]
+                        : JSON.parse(existingEvent.images as string)
+
+                    for (const oldImage of oldImages) {
+                        if (oldImage.publicId) {
+                            await deleteImageFromCloudinary(oldImage.publicId)
+                        }
+                    }
+                } catch (error) {
+                    log.warn("Failed to delete old additional images from Cloudinary:", error)
                 }
             }
         }
@@ -247,15 +307,32 @@ export async function deleteEvent(eventId: number): Promise<ServiceResponse<Even
             where: { id: eventId },
         })
 
-        // Delete image from Cloudinary
+        // Delete images from Cloudinary
         if (event.image) {
             try {
                 const publicId = event.image.split("/").pop()?.split(".")[0]
                 if (publicId) {
-                    await cloudinary.uploader.destroy(`events/${publicId}`)
+                    await deleteImageFromCloudinary(`events/${publicId}`)
                 }
             } catch (error) {
-                log.warn("Failed to delete image from Cloudinary:", error)
+                log.warn("Failed to delete featured image from Cloudinary:", error)
+            }
+        }
+
+        // Delete additional images
+        if (event.images) {
+            try {
+                const additionalImages = Array.isArray(event.images)
+                    ? event.images as any[]
+                    : JSON.parse(event.images as string)
+
+                for (const image of additionalImages) {
+                    if (image.publicId) {
+                        await deleteImageFromCloudinary(image.publicId)
+                    }
+                }
+            } catch (error) {
+                log.warn("Failed to delete additional images from Cloudinary:", error)
             }
         }
 

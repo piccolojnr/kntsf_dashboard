@@ -5,9 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Calendar, MapPin, Users } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { format } from "date-fns";
 import { getHtmlFromString } from "@/components/form/fields/initial-value";
+import { ImageGallery } from "@/components/common/image-gallery";
 
 interface EventViewProps {
   event: {
@@ -17,6 +17,7 @@ interface EventViewProps {
     description: string;
     excerpt: string;
     image: string;
+    images?: any; // JSON field containing additional images
     date: Date;
     time: string;
     location: string;
@@ -38,6 +39,20 @@ interface EventViewProps {
 
 export function EventView({ event }: EventViewProps) {
   const html = getHtmlFromString(event.description);
+
+  // Parse additional images from JSON
+  const additionalImages = (() => {
+    try {
+      if (event.images) {
+        return Array.isArray(event.images)
+          ? event.images
+          : JSON.parse(event.images as string);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  })();
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -95,16 +110,13 @@ export function EventView({ event }: EventViewProps) {
                 </p>
               </div>
 
-              {/* Event Image */}
-              <div className="relative aspect-video w-full overflow-hidden rounded-lg mb-8">
-                <Image
-                  src={event.image || "/placeholder.svg"}
-                  alt={event.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </div>
+              {/* Event Images */}
+              <ImageGallery
+                featuredImage={event.image}
+                images={additionalImages}
+                alt={event.title}
+                className="mb-8"
+              />
 
               {/* Event Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

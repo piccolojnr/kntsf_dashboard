@@ -72,6 +72,7 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
           published: event.published,
           maxAttendees: event.maxAttendees,
           image: event.image,
+          images: event.images as any,
         }}
       />
     </div>

@@ -5,10 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Calendar, Clock, User } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { format } from "date-fns";
 
 import { getHtmlFromString } from "@/components/form/fields/initial-value";
+import { ImageGallery } from "@/components/common/image-gallery";
 
 interface ArticleViewProps {
   article: {
@@ -18,6 +18,7 @@ interface ArticleViewProps {
     content: string;
     excerpt: string;
     image: string;
+    images?: any; // JSON field containing additional images
     category: string;
     categoryColor: string;
     featured: boolean;
@@ -35,6 +36,20 @@ interface ArticleViewProps {
 
 export function ArticleView({ article }: ArticleViewProps) {
   const html = getHtmlFromString(article.content);
+
+  // Parse additional images from JSON
+  const additionalImages = (() => {
+    try {
+      if (article.images) {
+        return Array.isArray(article.images)
+          ? article.images
+          : JSON.parse(article.images as string);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  })();
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -92,16 +107,13 @@ export function ArticleView({ article }: ArticleViewProps) {
                 </p>
               </div>
 
-              {/* Article Image */}
-              <div className="relative aspect-video w-full overflow-hidden rounded-lg mb-8">
-                <Image
-                  src={article.image || "/placeholder.svg"}
-                  alt={article.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </div>
+              {/* Article Images */}
+              <ImageGallery
+                featuredImage={article.image}
+                images={additionalImages}
+                alt={article.title}
+                className="mb-8"
+              />
 
               {/* Article Content */}
               <div className="prose prose-lg max-w-none">

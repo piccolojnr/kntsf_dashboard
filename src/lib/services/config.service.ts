@@ -95,6 +95,27 @@ export async function getConfig(): Promise<ServiceResponse<ConfigWithRelations>>
     }
 }
 
+export async function getPermitConfig(): Promise<ServiceResponse<PermitConfig>> {
+    try {
+        const config = await prisma.permitConfig.findFirst();
+
+        if (!config) {
+            return {
+                success: false,
+                error: 'Permit configuration not found'
+            }
+        }
+
+        return {
+            success: true,
+            data: config
+        }
+    } catch (error: any) {
+        log.error('Error fetching permit configuration:', error)
+        return handleError(error)
+    }
+}
+
 export async function getPublicConfig(): Promise<ServiceResponse<PublicConfig>> {
     try {
         const config = await prisma.config.findFirst({

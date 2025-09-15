@@ -66,7 +66,12 @@ const permitFormSchema = z.object({
       today.setHours(0, 0, 0, 0);
       return date >= today;
     }, "Expiry date cannot be in the past"),
-  email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
+  email: z
+    .string()
+    .trim()
+    .email("Invalid email address")
+    .optional()
+    .or(z.literal("")),
 });
 
 type PermitFormValues = z.infer<typeof permitFormSchema>;
@@ -79,6 +84,18 @@ interface CreatePermitFormProps {
   setIsDialogOpen: (isOpen: boolean) => void;
   onSuccess: () => void;
   studentId?: string;
+  permitConfig:
+    | {
+        id: number;
+        expirationDate: Date;
+        defaultAmount: number;
+        currency: string;
+        enablePermitRequest: boolean;
+        configId: number;
+        createdAt: Date;
+        updatedAt: Date;
+      }
+    | undefined;
 }
 
 interface Student {
@@ -106,6 +123,7 @@ export default function CreatePermitForm({
   setIsDialogOpen,
   onSuccess,
   studentId,
+  permitConfig,
 }: CreatePermitFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
@@ -116,7 +134,7 @@ export default function CreatePermitForm({
     resolver: zodResolver(permitFormSchema),
     defaultValues: {
       studentId: studentId || "",
-      expiryDate: getDefaultExpiryDate(),
+      expiryDate: permitConfig?.expirationDate || getDefaultExpiryDate(),
       amountPaid: "100.00",
       email: "",
     },
@@ -295,7 +313,8 @@ export default function CreatePermitForm({
                       />
                     </FormControl>
                     <FormDescription className="text-muted-foreground text-sm">
-                      If provided, this will update the student&apos;s email before sending the permit.
+                      If provided, this will update the student&apos;s email
+                      before sending the permit.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

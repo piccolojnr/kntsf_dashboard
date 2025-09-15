@@ -6,6 +6,7 @@ staff, and administrators.
 
 ## What is this app?
 
+
 This system helps organizations efficiently handle permit requests, approvals,
 and renewals. It also provides tools for managing students, events, news,
 newsletters, and more, all in one place.

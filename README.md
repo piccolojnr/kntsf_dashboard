@@ -4,6 +4,7 @@ Welcome to the Permit Management System – a modern web application designed to
 streamline the process of creating, tracking, and managing permits for students,
 staff, and administrators.
 
+
 ## What is this app?
 
 

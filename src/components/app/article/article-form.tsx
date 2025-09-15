@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createArticle, updateArticle } from "@/lib/services/news.service";
-import { ImageUpload } from "@/components/common/image-upload";
+import { MultipleImageUpload } from "@/components/common/multiple-image-upload";
 import { Loader2 } from "lucide-react";
 import {
   Select,
@@ -71,7 +71,11 @@ const articleSchema = z.object({
 type ArticleFormValues = z.infer<typeof articleSchema>;
 
 interface ArticleFormProps {
-  initialData?: ArticleFormValues & { id?: number; image?: string };
+  initialData?: ArticleFormValues & {
+    id?: number;
+    image?: string;
+    images?: any[];
+  };
 }
 
 const CATEGORY_COLORS = [
@@ -90,7 +94,7 @@ const CATEGORY_COLORS = [
 
 export function ArticleForm({ initialData }: ArticleFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const router = useRouter();
 
   const form = useForm<ArticleFormValues>({
@@ -111,9 +115,9 @@ export function ArticleForm({ initialData }: ArticleFormProps) {
     try {
       setIsLoading(true);
 
-      // Validate image for new articles
-      if (!initialData && !imageFile) {
-        toast.error("Please upload an image for the article");
+      // Validate images for new articles
+      if (!initialData && imageFiles.length === 0) {
+        toast.error("Please upload at least one image for the article");
         return;
       }
 
@@ -123,15 +127,15 @@ export function ArticleForm({ initialData }: ArticleFormProps) {
         result = await updateArticle(
           initialData.id,
           data,
-          imageFile || undefined
+          imageFiles.length > 0 ? imageFiles : undefined
         );
       } else {
         // Create new article
-        if (!imageFile) {
-          toast.error("Please upload an image for the article");
+        if (imageFiles.length === 0) {
+          toast.error("Please upload at least one image for the article");
           return;
         }
-        result = await createArticle(data, imageFile);
+        result = await createArticle(data, imageFiles);
       }
 
       if (result.success) {
@@ -370,19 +374,21 @@ export function ArticleForm({ initialData }: ArticleFormProps) {
             {/* Image Upload */}
             <Card>
               <CardHeader>
-                <CardTitle>Article Image</CardTitle>
+                <CardTitle>Article Images</CardTitle>
               </CardHeader>
               <CardContent>
                 <FormItem>
-                  <FormLabel>Featured Image</FormLabel>
+                  <FormLabel>Images (Max 5)</FormLabel>
                   <FormControl>
-                    <ImageUpload
-                      value={initialData?.image}
-                      onChange={(file) => setImageFile(file)}
+                    <MultipleImageUpload
+                      value={initialData?.image ? [initialData.image] : []}
+                      onChange={(files) => setImageFiles(files)}
+                      maxImages={5}
                     />
                   </FormControl>
                   <FormDescription>
-                    Upload a high-quality image that represents your article
+                    Upload high-quality images. First image will be the featured
+                    image.
                   </FormDescription>
                 </FormItem>
               </CardContent>

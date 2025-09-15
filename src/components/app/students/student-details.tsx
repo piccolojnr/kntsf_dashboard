@@ -28,6 +28,7 @@ import {
   StudentDetails as StudentDetailsType,
 } from "@/lib/types/common";
 import { AccessRoles } from "@/lib/role";
+import { useQuery } from "@tanstack/react-query";
 
 export function StudentDetails({
   permissions,
@@ -40,6 +41,16 @@ export function StudentDetails({
   const [student, setStudent] = useState<StudentDetailsType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPermitDialogOpen, setIsPermitDialogOpen] = useState(false);
+  const { data: permitConfig } = useQuery({
+    queryKey: ["permitConfig"],
+    queryFn: async () => {
+      const response = await services.config.getPermitConfig();
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load configuration");
+      }
+      return response.data;
+    },
+  });
 
   useEffect(() => {
     loadStudentDetails();
@@ -118,6 +129,7 @@ export function StudentDetails({
                   setIsPermitDialogOpen(false);
                   loadStudentDetails();
                 }}
+                permitConfig={permitConfig}
                 setIsDialogOpen={setIsPermitDialogOpen}
                 studentId={student.studentId}
               />

@@ -8,8 +8,10 @@ import {
 } from "@/components/ui/card";
 import { ArrowRight, Shield, Clock, FileCheck } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
+  return redirect("/dashboard");
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}

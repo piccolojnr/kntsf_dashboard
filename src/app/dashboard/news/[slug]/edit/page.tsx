@@ -72,6 +72,7 @@ export default async function EditArticlePage({
           published: article.published,
           readTime: article.readTime,
           image: article.image,
+          images: article.images as any,
         }}
       />
     </div>

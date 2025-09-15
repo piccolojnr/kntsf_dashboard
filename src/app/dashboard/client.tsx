@@ -17,6 +17,9 @@ import {
   Activity,
   Bell,
   Settings,
+  Timer,
+  CalendarDays,
+  Target,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +46,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { SessionUser } from "@/lib/types/common";
 import type { AccessRoles } from "@/lib/role";
+import { useQuery } from "@tanstack/react-query";
 
 interface DashboardStats {
   totalStudents: number;
@@ -50,6 +54,12 @@ interface DashboardStats {
   activePermits: number;
   expiringSoon: number;
   totalPermitRevenue: number;
+  activePermitsToday: number;
+  activePermitsThisWeek: number;
+  activePermitsThisMonth: number;
+  activePermitsRevenue: number;
+  averagePermitDuration: number;
+  recentlyIssuedPermits: number;
   totalNewsletters: number;
   sentNewsletters: number;
   totalSubscribers: number;
@@ -82,6 +92,12 @@ export default function ClientOnly({
     activePermits: 0,
     expiringSoon: 0,
     totalPermitRevenue: 0,
+    activePermitsToday: 0,
+    activePermitsThisWeek: 0,
+    activePermitsThisMonth: 0,
+    activePermitsRevenue: 0,
+    averagePermitDuration: 0,
+    recentlyIssuedPermits: 0,
     totalNewsletters: 0,
     sentNewsletters: 0,
     totalSubscribers: 0,
@@ -99,6 +115,16 @@ export default function ClientOnly({
     successfulPayments: 0,
     totalRevenue: 0,
     pendingPayments: 0,
+  });
+  const { data: permitConfig } = useQuery({
+    queryKey: ["permitConfig"],
+    queryFn: async () => {
+      const response = await services.config.getPermitConfig();
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load configuration");
+      }
+      return response.data;
+    },
   });
 
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
@@ -277,6 +303,7 @@ export default function ClientOnly({
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="permits">Permits</TabsTrigger>
+          <TabsTrigger value="active-permits">Active Permits</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
         </TabsList>
@@ -415,6 +442,142 @@ export default function ClientOnly({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Students with permits
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="active-permits" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Active Today
+                </CardTitle>
+                <CalendarDays className="w-4 h-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.activePermitsToday}
+                </div>
+                <p className="text-xs text-muted-foreground">Started today</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Active This Week
+                </CardTitle>
+                <Calendar className="w-4 h-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.activePermitsThisWeek}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Started this week
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Active This Month
+                </CardTitle>
+                <Calendar className="w-4 h-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.activePermitsThisMonth}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Started this month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Active Revenue
+                </CardTitle>
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  GHS {stats.activePermitsRevenue.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  From active permits
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Recently Issued
+                </CardTitle>
+                <Plus className="w-4 h-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.recentlyIssuedPermits}
+                </div>
+                <p className="text-xs text-muted-foreground">Last 7 days</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Average Duration
+                </CardTitle>
+                <Timer className="w-4 h-4 text-indigo-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.averagePermitDuration}
+                </div>
+                <p className="text-xs text-muted-foreground">Days average</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Expiring Soon
+                </CardTitle>
+                <Clock className="w-4 h-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.expiringSoon}</div>
+                <p className="text-xs text-muted-foreground">Within 7 days</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">
+                  Success Rate
+                </CardTitle>
+                <Target className="w-4 h-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.totalStudents > 0
+                    ? (
+                        (stats.activePermits / stats.totalStudents) *
+                        100
+                      ).toFixed(1)
+                    : "0"}
+                  %
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Student coverage
                 </p>
               </CardContent>
             </Card>
@@ -702,6 +865,7 @@ export default function ClientOnly({
                 fetchStats(); // Refresh stats after creating permit
               }}
               setIsDialogOpen={setIsPermitDialogOpen}
+              permitConfig={permitConfig}
             />
           </DialogContent>
         </Dialog>

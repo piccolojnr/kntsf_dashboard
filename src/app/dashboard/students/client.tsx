@@ -50,6 +50,17 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
   const [levels, setLevels] = useState<string[]>([]);
   const [courses, setCourses] = useState<string[]>([]);
 
+  const { data: permitConfig } = useQuery({
+    queryKey: ["permitConfig"],
+    queryFn: async () => {
+      const response = await services.config.getPermitConfig();
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load configuration");
+      }
+      return response.data;
+    },
+  });
+
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
 
@@ -262,7 +273,9 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               {levels.map((lvl) => (
-                <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                <SelectItem key={lvl} value={lvl}>
+                  {lvl}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -283,7 +296,9 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               {courses.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -352,6 +367,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
                 setIsPermitDialogOpen(false);
                 queryClient.invalidateQueries({ queryKey: ["students"] });
               }}
+              permitConfig={permitConfig}
               setIsDialogOpen={setIsPermitDialogOpen}
               studentId={selectedStudentForPermit?.studentId || ""}
             />

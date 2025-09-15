@@ -53,7 +53,9 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const [pageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [issuedByFilter, setIssuedByFilter] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"all" | "duplicates" | "expiring">("all");
+  const [viewMode, setViewMode] = useState<"all" | "duplicates" | "expiring">(
+    "all"
+  );
   const [expiringDays, setExpiringDays] = useState<number>(30);
   const [isResendDialogOpen, setIsResendDialogOpen] = useState(false);
   const [resendPermitId, setResendPermitId] = useState<number | null>(null);
@@ -62,6 +64,17 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
 
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
+
+  const { data: permitConfig } = useQuery({
+    queryKey: ["permitConfig"],
+    queryFn: async () => {
+      const response = await services.config.getPermitConfig();
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load configuration");
+      }
+      return response.data;
+    },
+  });
 
   const { data: permitsData, isLoading } = useQuery({
     queryKey: [
@@ -79,7 +92,8 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
           page: currentPage,
           pageSize,
         });
-        if (!res.success) throw new Error(res.error || "Failed to load duplicates");
+        if (!res.success)
+          throw new Error(res.error || "Failed to load duplicates");
         return res.data;
       }
       if (viewMode === "expiring") {
@@ -88,7 +102,8 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
           page: currentPage,
           pageSize,
         });
-        if (!res.success) throw new Error(res.error || "Failed to load expiring permits");
+        if (!res.success)
+          throw new Error(res.error || "Failed to load expiring permits");
         return res.data;
       }
       const response = await services.permit.getAll({
@@ -122,19 +137,20 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
     return issuersData;
   }, [issuersData]);
 
-  const openResendDialog = useCallback((permitId: number) => {
-    const permit = permitsData?.data.find((p) => p.id === permitId);
-    if (permit) {
-      // Set all state values first
-      setResendPermitId(permitId);
-      setResendEmail(permit.student.email ?? "");
-      setResendPhone(permit.student.number ?? "");
-      // Open modal after state is set
-      setIsResendDialogOpen(true);
-    }
-  }, [permitsData?.data]);
-
-
+  const openResendDialog = useCallback(
+    (permitId: number) => {
+      const permit = permitsData?.data.find((p) => p.id === permitId);
+      if (permit) {
+        // Set all state values first
+        setResendPermitId(permitId);
+        setResendEmail(permit.student.email ?? "");
+        setResendPhone(permit.student.number ?? "");
+        // Open modal after state is set
+        setIsResendDialogOpen(true);
+      }
+    },
+    [permitsData?.data]
+  );
 
   const handleRevoke = useCallback(
     async (permitId: number) => {
@@ -187,7 +203,12 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
         return;
       }
 
-      if (!confirm("Are you sure you want to delete this permit? This action cannot be undone and will also delete the associated payment record.")) return;
+      if (
+        !confirm(
+          "Are you sure you want to delete this permit? This action cannot be undone and will also delete the associated payment record."
+        )
+      )
+        return;
 
       try {
         const response = await services.permit.deletePermit(permitId);
@@ -210,15 +231,18 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
     return now > expiryDate;
   }, []);
 
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-    // Reset filters when searching
-    if (query !== searchQuery) {
-      setStatusFilter("");
-      setIssuedByFilter("");
-    }
-  }, [searchQuery]);
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      setCurrentPage(1);
+      // Reset filters when searching
+      if (query !== searchQuery) {
+        setStatusFilter("");
+        setIssuedByFilter("");
+      }
+    },
+    [searchQuery]
+  );
 
   const resetFilters = useCallback(() => {
     setStatusFilter("");
@@ -236,10 +260,13 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
     setCurrentPage(1);
   }, []);
 
-  const handleViewModeChange = useCallback((value: "all" | "duplicates" | "expiring") => {
-    setViewMode(value);
-    setCurrentPage(1);
-  }, []);
+  const handleViewModeChange = useCallback(
+    (value: "all" | "duplicates" | "expiring") => {
+      setViewMode(value);
+      setCurrentPage(1);
+    },
+    []
+  );
 
   const handleExpiringDaysChange = useCallback((value: string) => {
     const parsed = parseInt(value, 10);
@@ -253,7 +280,10 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
         <h2 className="text-3xl font-bold tracking-tight">Permits</h2>
         <div className="flex items-center gap-2">
           {/* View mode selector */}
-          <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as any)}>
+          <Select
+            value={viewMode}
+            onValueChange={(v) => handleViewModeChange(v as any)}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="View" />
             </SelectTrigger>
@@ -265,7 +295,10 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
           </Select>
 
           {viewMode === "expiring" && (
-            <Select value={String(expiringDays)} onValueChange={handleExpiringDaysChange}>
+            <Select
+              value={String(expiringDays)}
+              onValueChange={handleExpiringDaysChange}
+            >
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Days" />
               </SelectTrigger>
@@ -286,7 +319,11 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               onChange={(e) => handleSearchChange(e.target.value)}
             />
           </div>
-          <Select value={statusFilter} onValueChange={handleStatusChange} disabled={viewMode !== "all"}>
+          <Select
+            value={statusFilter}
+            onValueChange={handleStatusChange}
+            disabled={viewMode !== "all"}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -297,7 +334,11 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={issuedByFilter} onValueChange={handleIssuedByChange} disabled={viewMode !== "all"}>
+          <Select
+            value={issuedByFilter}
+            onValueChange={handleIssuedByChange}
+            disabled={viewMode !== "all"}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by issuer" />
             </SelectTrigger>
@@ -340,6 +381,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                     setIsDialogOpen(false);
                     queryClient.invalidateQueries({ queryKey: ["permits"] });
                   }}
+                  permitConfig={permitConfig}
                   setIsDialogOpen={setIsDialogOpen}
                 />
               </DialogContent>
@@ -494,16 +536,26 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                               size="sm"
                               onClick={async () => {
                                 if (!permissions.isExecutive) {
-                                  toast.error("You don't have permission to reactivate permits");
+                                  toast.error(
+                                    "You don't have permission to reactivate permits"
+                                  );
                                   return;
                                 }
                                 try {
-                                  const res = await services.permit.reactivate(permit.id);
+                                  const res = await services.permit.reactivate(
+                                    permit.id
+                                  );
                                   if (res.success) {
-                                    toast.success("Permit reactivated successfully");
-                                    queryClient.invalidateQueries({ queryKey: ["permits"] });
+                                    toast.success(
+                                      "Permit reactivated successfully"
+                                    );
+                                    queryClient.invalidateQueries({
+                                      queryKey: ["permits"],
+                                    });
                                   } else {
-                                    toast.error(res.error || "Failed to reactivate permit");
+                                    toast.error(
+                                      res.error || "Failed to reactivate permit"
+                                    );
                                   }
                                 } catch (e) {
                                   console.error(e);

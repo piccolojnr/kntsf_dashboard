@@ -14,6 +14,14 @@ export interface DashboardStats {
   expiringSoon: number
   totalPermitRevenue: number
 
+  // Active Permits Detailed Stats
+  activePermitsToday: number
+  activePermitsThisWeek: number
+  activePermitsThisMonth: number
+  activePermitsRevenue: number
+  averagePermitDuration: number
+  recentlyIssuedPermits: number // Last 7 days
+
   // Newsletter Stats
   totalNewsletters: number
   sentNewsletters: number
@@ -46,7 +54,7 @@ export async function getStats(): Promise<ServiceResponse<DashboardStats>> {
   try {
     // Get permit statistics
     const permitStats = await prisma.permit.groupBy({
-      by: ["status"],
+      by: ["status", "expiryDate"],
       _count: true,
       _sum: {
         amountPaid: true,
@@ -111,6 +119,10 @@ export async function getStats(): Promise<ServiceResponse<DashboardStats>> {
     // Get expiring permits (within 7 days)
     const now = new Date()
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const startOfWeek = new Date(now.getTime() - (now.getDay() * 24 * 60 * 60 * 1000))
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
     const expiringPermits = await prisma.permit.count({
       where: {
@@ -122,6 +134,74 @@ export async function getStats(): Promise<ServiceResponse<DashboardStats>> {
       },
     })
 
+    // Get detailed active permit statistics
+    const [
+      activePermitsToday,
+      activePermitsThisWeek,
+      activePermitsThisMonth,
+      activePermitsRevenue,
+      recentlyIssuedPermits
+    ] = await Promise.all([
+      prisma.permit.count({
+        where: {
+          status: "active",
+          expiryDate: { gt: now },
+          startDate: { gte: startOfToday },
+        },
+      }),
+      prisma.permit.count({
+        where: {
+          status: "active",
+          expiryDate: { gt: now },
+          startDate: { gte: startOfWeek },
+        },
+      }),
+      prisma.permit.count({
+        where: {
+          status: "active",
+          expiryDate: { gt: now },
+          startDate: { gte: startOfMonth },
+        },
+      }),
+      prisma.permit.aggregate({
+        where: {
+          status: "active",
+          expiryDate: { gt: now },
+        },
+        _sum: {
+          amountPaid: true,
+        },
+      }),
+      prisma.permit.count({
+        where: {
+          status: "active",
+          createdAt: { gte: sevenDaysAgo },
+        },
+      }),
+    ])
+
+    // Calculate average permit duration for active permits
+    const activePermitsWithDuration = await prisma.permit.findMany({
+      where: {
+        status: "active",
+        expiryDate: { gt: now },
+      },
+      select: {
+        startDate: true,
+        expiryDate: true,
+      },
+    })
+
+    const averagePermitDuration = activePermitsWithDuration.length > 0
+      ? activePermitsWithDuration.reduce((sum, permit) => {
+        const duration = (permit.expiryDate.getTime() - permit.startDate.getTime()) / (1000 * 60 * 60 * 24) // days
+        return sum + duration
+      }, 0) / activePermitsWithDuration.length
+      : 0
+
+    // current date
+    const currentDate = new Date();
+
     // Calculate stats
     const stats: DashboardStats = {
       // Student & User Stats
@@ -129,9 +209,17 @@ export async function getStats(): Promise<ServiceResponse<DashboardStats>> {
       totalUsers,
 
       // Permit Stats
-      activePermits: permitStats.find((stat) => stat.status === "active")?._count || 0,
+      activePermits: permitStats.find((stat) => stat.status === "active" && stat.expiryDate > currentDate)?._count || 0,
       expiringSoon: expiringPermits,
       totalPermitRevenue: permitStats.reduce((sum, stat) => sum + (stat._sum.amountPaid || 0), 0),
+
+      // Active Permits Detailed Stats
+      activePermitsToday,
+      activePermitsThisWeek,
+      activePermitsThisMonth,
+      activePermitsRevenue: activePermitsRevenue._sum.amountPaid || 0,
+      averagePermitDuration: Math.round(averagePermitDuration),
+      recentlyIssuedPermits,
 
       // Newsletter Stats
       totalNewsletters: newsletterStats.reduce((sum, stat) => sum + stat._count, 0),

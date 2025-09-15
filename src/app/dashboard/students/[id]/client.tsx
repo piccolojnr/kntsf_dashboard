@@ -47,7 +47,16 @@ export function StudentDetailsClient({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPermitDialogOpen, setIsPermitDialogOpen] = useState(false);
-
+  const { data: permitConfig } = useQuery({
+    queryKey: ["permitConfig"],
+    queryFn: async () => {
+      const response = await services.config.getPermitConfig();
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load configuration");
+      }
+      return response.data;
+    },
+  });
   const {
     data: student,
     isLoading,
@@ -173,6 +182,7 @@ export function StudentDetailsClient({
                     queryKey: ["student", studentId],
                   });
                 }}
+                permitConfig={permitConfig}
                 setIsDialogOpen={setIsPermitDialogOpen}
                 studentId={student.studentId}
               />

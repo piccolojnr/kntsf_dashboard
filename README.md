@@ -10,6 +10,7 @@ This system helps organizations efficiently handle permit requests, approvals,
 and renewals. It also provides tools for managing students, events, news,
 newsletters, and more, all in one place.
 
+
 ## Key Features
 
 - **Secure Management:** Advanced authentication and authorization to keep your

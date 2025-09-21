@@ -11,6 +11,7 @@ import {
   Mail,
   Package,
   Brain,
+  Vote,
 } from "lucide-react";
 import * as React from "react";
 import { NavMain } from "./nav-main";
@@ -84,6 +85,12 @@ export function AppSidebar({
         url: "/dashboard/ideas",
         icon: Brain,
         show: () => permissions.isExecutive,
+      },
+      {
+        title: "Polls",
+        url: "/dashboard/polls",
+        icon: Vote,
+        show: () => permissions.isPro,
       },
       {
         title: "Documents",

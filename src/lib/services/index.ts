@@ -13,6 +13,7 @@ import * as  NewsletterService from "./newsletter.service";
 import * as  DocumentService from "./document.service";
 import * as  IdeaService from "./idea.service";
 import * as  PaymentService from "./payment.service";
+import * as  PollService from "./poll.service";
 
 const services = {
     audit: AuditService,
@@ -30,6 +31,7 @@ const services = {
     document: DocumentService,
     idea: IdeaService,
     payment: PaymentService,
+    poll: PollService,
 }
 
 export default services;

@@ -59,6 +59,7 @@ model Student {
   deletedAt   DateTime? // Soft delete
   StudentIdea StudentIdea[]
   GameUser    GameUser?
+  pollVotes   PollVote[] // Votes cast by this student
 
   @@index([studentId])
   @@index([email])
@@ -334,4 +335,48 @@ model LeaderboardEntry {
   period LeaderboardPeriod @relation(fields: [periodId], references: [id])
 
   @@unique([userId, periodId]) // one entry per user per period
+}
+
+model Poll {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String?     @db.Text
+  startAt     DateTime
+  endAt       DateTime
+  showResults Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  options     PollOption[]
+  votes       PollVote[]
+
+  @@index([startAt, endAt])
+  @@index([showResults])
+}
+
+model PollOption {
+  id        Int      @id @default(autoincrement())
+  text      String
+  pollId    Int
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes     PollVote[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id        Int      @id @default(autoincrement())
+  pollId    Int
+  optionId  Int
+  studentId Int
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pollId, studentId]) // one vote per student per poll
+  @@index([pollId])
+  @@index([studentId])
 }

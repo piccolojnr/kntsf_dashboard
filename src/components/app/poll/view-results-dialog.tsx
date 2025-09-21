@@ -18,6 +18,7 @@ interface Poll {
   }[];
   votes: {
     id: number;
+    optionId: number;
     student: {
       name?: string;
       studentId: string;
@@ -32,26 +33,24 @@ interface ViewResultsDialogProps {
 }
 
 export function ViewResultsDialog({ open, onOpenChange, poll }: ViewResultsDialogProps) {
+  // Helper function to get vote count for each option
+  const getOptionVoteCount = (optionId: number) => {
+    if (!poll?.votes) return 0;
+    return poll.votes.filter((vote: any) => vote.optionId === optionId).length;
+  };
+
   // Transform poll data to include results for PollResults component
   const pollWithResults = poll ? {
     ...poll,
     results: poll.options.map(option => {
-      // For now, we'll create mock results since the actual vote-option relationship
-      // needs to be properly established in the database query
-      // This is a simplified version that distributes votes evenly
+      const voteCount = getOptionVoteCount(option.id);
       const totalVotes = poll.votes.length;
-      const optionCount = poll.options.length;
-      const baseVotes = Math.floor(totalVotes / optionCount);
-      const remainder = totalVotes % optionCount;
-      
-      // Give the first few options one extra vote if there's a remainder
-      const voteCount = baseVotes + (option.id <= remainder ? 1 : 0);
       
       return {
         id: option.id,
         text: option.text,
         voteCount: voteCount,
-        percentage: totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0
+        percentage: totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0
       };
     }),
     totalVotes: poll.votes.length

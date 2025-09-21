@@ -39,6 +39,7 @@ interface Poll {
   }[];
   votes: {
     id: number;
+    optionId: number;
     student: {
       name?: string;
       studentId: string;

@@ -16,7 +16,8 @@ const createPollSchema = z.object({
 });
 
 const updatePollSchema = createPollSchema.partial().extend({
-  id: z.number()
+  id: z.number(),
+  forceUpdateOptions: z.boolean().optional() // Flag to explicitly allow option updates that clear votes
 });
 
 const castVoteSchema = z.object({
@@ -28,6 +29,45 @@ const castVoteSchema = z.object({
 export type CreatePollData = z.infer<typeof createPollSchema>;
 export type UpdatePollData = z.infer<typeof updatePollSchema>;
 export type CastVoteData = z.infer<typeof castVoteSchema>;
+
+// Helper function to check if poll has votes
+export async function checkPollHasVotes(pollId: number) {
+  const voteCount = await prisma.pollVote.count({
+    where: { pollId }
+  });
+
+  return {
+    hasVotes: voteCount > 0,
+    voteCount
+  };
+}
+
+// Helper function to backup votes before deletion
+export async function backupPollVotes(pollId: number) {
+  const votes = await prisma.pollVote.findMany({
+    where: { pollId },
+    include: {
+      student: {
+        select: { studentId: true, name: true }
+      },
+      option: {
+        select: { text: true }
+      }
+    }
+  });
+
+  return {
+    pollId,
+    backupDate: new Date().toISOString(),
+    totalVotes: votes.length,
+    votes: votes.map(vote => ({
+      studentId: vote.student.studentId,
+      studentName: vote.student.name,
+      optionText: vote.option.text,
+      votedAt: vote.createdAt
+    }))
+  };
+}
 
 // Service functions
 export async function createPoll(data: CreatePollData) {
@@ -62,15 +102,38 @@ export async function createPoll(data: CreatePollData) {
   });
 };
 
-export async function updatePoll(id: number, data: Partial<CreatePollData>) {
+export async function updatePoll(id: number, data: Partial<CreatePollData & { forceUpdateOptions?: boolean }>) {
   const validatedData = updatePollSchema.parse({ id, ...data });
 
   if (validatedData.endAt && validatedData.startAt && validatedData.endAt <= validatedData.startAt) {
     throw new Error("End date must be after start date");
   }
 
-  // If updating options, delete existing ones and create new ones
+  // If updating options, check for existing votes first
   if (validatedData.options) {
+    // Check if poll has existing votes
+    const existingVotes = await prisma.pollVote.count({
+      where: { pollId: id }
+    });
+
+    if (existingVotes > 0 && !validatedData.forceUpdateOptions) {
+      throw new Error(
+        `Cannot update poll options: This poll has ${existingVotes} existing vote(s). ` +
+        "Updating options will permanently delete all votes. " +
+        "To proceed anyway, set 'forceUpdateOptions' to true."
+      );
+    }
+
+    // Backup votes before deletion if any exist
+    let voteBackup = null;
+    if (existingVotes > 0) {
+      console.warn(`Backing up and deleting ${existingVotes} votes from poll ${id} due to option update`);
+      voteBackup = await backupPollVotes(id);
+
+      // You could save this backup to a file, database, or return it
+      console.log('Vote backup created:', JSON.stringify(voteBackup, null, 2));
+    }
+
     await prisma.pollOption.deleteMany({
       where: { pollId: id }
     });
@@ -91,6 +154,36 @@ export async function updatePoll(id: number, data: Partial<CreatePollData>) {
           }))
         }
       })
+    },
+    include: {
+      options: true,
+      votes: {
+        include: {
+          student: true,
+          option: true
+        }
+      }
+    }
+  });
+};
+
+// Safe update function that doesn't allow option updates
+export async function updatePollSafe(id: number, data: Omit<Partial<CreatePollData>, 'options'>) {
+  const validatedData = updatePollSchema.parse({ id, ...data });
+
+  if (validatedData.endAt && validatedData.startAt && validatedData.endAt <= validatedData.startAt) {
+    throw new Error("End date must be after start date");
+  }
+
+  // Explicitly exclude options from being updated
+  return await prisma.poll.update({
+    where: { id },
+    data: {
+      title: validatedData.title,
+      description: validatedData.description,
+      startAt: validatedData.startAt,
+      endAt: validatedData.endAt,
+      showResults: validatedData.showResults,
     },
     include: {
       options: true,

@@ -268,7 +268,7 @@ export async function getPollResults(id: number) {
 };
 
 export async function getPollById(id: number) {
-  return await prisma.poll.findUnique({
+  const poll = await prisma.poll.findUnique({
     where: { id },
     include: {
       options: true,
@@ -280,6 +280,19 @@ export async function getPollById(id: number) {
       }
     }
   });
+
+  // participationRate calculation
+  let participationRate = 0;
+  if (poll) {
+    const totalStudents = await prisma.student.count();
+    const totalVotes = poll.votes.length;
+    participationRate = totalStudents > 0 ? (totalVotes / totalStudents) * 100 : 0;
+  }
+
+  return {
+    ...poll,
+    participationRate
+  };
 };
 
 export async function getStudentVote(pollId: number, studentId: string) {

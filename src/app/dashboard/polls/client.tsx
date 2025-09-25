@@ -33,6 +33,7 @@ interface Poll {
   id: number;
   title: string;
   description?: string;
+  type: "FIXED_OPTIONS" | "DYNAMIC_OPTIONS";
   startAt: string;
   endAt: string;
   showResults: boolean;
@@ -41,6 +42,10 @@ interface Poll {
   options: {
     id: number;
     text: string;
+    createdBy?: {
+      studentId: string;
+      name?: string;
+    };
   }[];
   votes: {
     id: number;
@@ -218,6 +223,9 @@ export function PollsClient() {
                       <Badge className={pollStatus.color}>
                         {pollStatus.status}
                       </Badge>
+                      <Badge variant={poll.type === "DYNAMIC_OPTIONS" ? "default" : "secondary"}>
+                        {poll.type === "DYNAMIC_OPTIONS" ? "Dynamic" : "Fixed"}
+                      </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -288,8 +296,13 @@ export function PollsClient() {
                     <p className="text-sm font-medium mb-2">Options ({poll.options.length})</p>
                     <div className="flex flex-wrap gap-2">
                       {poll.options.map((option) => (
-                        <Badge key={option.id} variant="outline">
-                          {option.text}
+                        <Badge key={option.id} variant="outline" className="flex items-center gap-1">
+                          <span>{option.text}</span>
+                          {poll.type === "DYNAMIC_OPTIONS" && option.createdBy && (
+                            <span className="text-xs text-muted-foreground">
+                              (by {option.createdBy.name || option.createdBy.studentId})
+                            </span>
+                          )}
                         </Badge>
                       ))}
                     </div>

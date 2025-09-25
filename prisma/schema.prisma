@@ -60,6 +60,7 @@ model Student {
   StudentIdea StudentIdea[]
   GameUser    GameUser?
   pollVotes   PollVote[] // Votes cast by this student
+  pollOptions PollOption[] // Options created by this student
 
   @@index([studentId])
   @@index([email])
@@ -341,6 +342,7 @@ model Poll {
   id          Int         @id @default(autoincrement())
   title       String
   description String?     @db.Text
+  type        PollType    @default(FIXED_OPTIONS)
   startAt     DateTime
   endAt       DateTime
   showResults Boolean     @default(true)
@@ -351,18 +353,34 @@ model Poll {
 
   @@index([startAt, endAt])
   @@index([showResults])
+  @@index([type])
+}
+
+enum PollType {
+  FIXED_OPTIONS
+  DYNAMIC_OPTIONS
 }
 
 model PollOption {
-  id        Int      @id @default(autoincrement())
-  text      String
-  pollId    Int
-  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  votes     PollVote[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int           @id @default(autoincrement())
+  text        String
+  pollId      Int
+  poll        Poll          @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  createdBy   Student?      @relation(fields: [createdById], references: [id])
+  createdById Int?
+  status      OptionStatus  @default(ACTIVE)
+  votes       PollVote[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   @@index([pollId])
+  @@index([createdById])
+  @@index([status])
+}
+
+enum OptionStatus {
+  ACTIVE
+  MERGED
 }
 
 model PollVote {

@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, X,  } from "lucide-react";
 import {
   createPollAction,
   updatePollAction,
@@ -24,6 +25,7 @@ import { AlertTriangle, Info } from "lucide-react";
 const pollFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
+  type: z.enum(["FIXED_OPTIONS", "DYNAMIC_OPTIONS"]),
   startAt: z.string().min(1, "Start date is required"),
   endAt: z.string().min(1, "End date is required"),
   showResults: z.boolean(),
@@ -33,7 +35,17 @@ const pollFormSchema = z.object({
         text: z.string().min(1, "Option text is required"),
       })
     )
-    .min(2, "At least 2 options are required"),
+    .optional(),
+}).refine((data) => {
+  // For FIXED_OPTIONS polls, require at least 2 options
+  if (data.type === "FIXED_OPTIONS") {
+    return data.options && data.options.length >= 2;
+  }
+  // For DYNAMIC_OPTIONS polls, options are not required
+  return true;
+}, {
+  message: "Fixed options polls require at least 2 options",
+  path: ["options"],
 });
 
 type PollFormData = z.infer<typeof pollFormSchema>;
@@ -43,6 +55,7 @@ interface PollFormProps {
     id?: number;
     title: string;
     description?: string;
+    type?: "FIXED_OPTIONS" | "DYNAMIC_OPTIONS";
     startAt: string;
     endAt: string;
     showResults: boolean;
@@ -78,12 +91,13 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
     defaultValues: {
       title: initialData?.title || "",
       description: initialData?.description || "",
+      type: initialData?.type || "FIXED_OPTIONS",
       startAt: initialData?.startAt
         ? formatDateForInput(initialData.startAt)
         : "",
       endAt: initialData?.endAt ? formatDateForInput(initialData.endAt) : "",
       showResults: initialData?.showResults ?? true,
-      options: initialData?.options || [{ text: "" }, { text: "" }],
+      options: initialData?.options || (initialData?.type === "DYNAMIC_OPTIONS" ? undefined : [{ text: "" }, { text: "" }]),
     },
   });
 
@@ -92,10 +106,16 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
     if (initialData) {
       setValue("title", initialData.title);
       setValue("description", initialData.description || "");
+      setValue("type", initialData.type || "FIXED_OPTIONS");
       setValue("startAt", formatDateForInput(initialData.startAt));
       setValue("endAt", formatDateForInput(initialData.endAt));
       setValue("showResults", initialData.showResults);
-      setValue("options", initialData.options);
+      // For dynamic polls, don't set options
+      if (initialData.type === "DYNAMIC_OPTIONS") {
+        setValue("options", undefined);
+      } else {
+        setValue("options", initialData.options);
+      }
     }
   }, [initialData, setValue]);
 
@@ -112,8 +132,21 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
   }, [isEditing, initialData?.id]);
 
   const options = watch("options");
+  const pollType = watch("type");
+
+  // Handle poll type changes
+  useEffect(() => {
+    if (pollType === "DYNAMIC_OPTIONS") {
+      // Clear options for dynamic polls
+      setValue("options", undefined);
+    } else if (pollType === "FIXED_OPTIONS" && (!options || options.length === 0)) {
+      // Set default options for fixed polls if none exist
+      setValue("options", [{ text: "" }, { text: "" }]);
+    }
+  }, [pollType, setValue, options]);
 
   const addOption = () => {
+    if (!options) return;
     setValue("options", [...options, { text: "" }]);
 
     // Mark as changed when adding options
@@ -124,6 +157,7 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
   };
 
   const removeOption = (index: number) => {
+    if (!options) return;
     if (options.length > 2) {
       setValue(
         "options",
@@ -139,6 +173,7 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
   };
 
   const updateOption = (index: number, text: string) => {
+    if (!options) return;
     const newOptions = [...options];
     newOptions[index] = { text };
     setValue("options", newOptions);
@@ -163,6 +198,8 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
         ...data,
         startAt: new Date(data.startAt),
         endAt: new Date(data.endAt),
+        // For dynamic polls, don't include options
+        ...(data.type === "DYNAMIC_OPTIONS" ? { options: undefined } : {}),
       };
 
       let result;
@@ -273,6 +310,36 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
           )}
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="type">Poll Type *</Label>
+          <Select
+            value={pollType}
+            onValueChange={(value: "FIXED_OPTIONS" | "DYNAMIC_OPTIONS") => setValue("type", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select poll type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="FIXED_OPTIONS">Fixed Options</SelectItem>
+              <SelectItem value="DYNAMIC_OPTIONS">Dynamic Options</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.type && (
+            <p className="text-sm text-red-500">{errors.type.message}</p>
+          )}
+        </div>
+
+        {/* Poll Type Info */}
+        {pollType === "DYNAMIC_OPTIONS" && (
+          <Alert className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Dynamic Poll</AlertTitle>
+            <AlertDescription>
+              Students can add their own options to this poll. The poll will start empty and students will contribute options as they vote.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="startAt">Start Date & Time *</Label>
@@ -304,52 +371,55 @@ export function PollForm({ initialData, onSuccess }: PollFormProps) {
           <Label htmlFor="showResults">Show results to students</Label>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Label>Poll Options *</Label>
-              {hasVotes && isEditing && (
-                <div className="flex items-center space-x-1 text-amber-600">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span className="text-xs">Has {voteCount} votes</span>
-                </div>
-              )}
+        {/* Options Section - Only show for Fixed Options polls */}
+        {pollType === "FIXED_OPTIONS" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Label>Poll Options *</Label>
+                {hasVotes && isEditing && (
+                  <div className="flex items-center space-x-1 text-amber-600">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-xs">Has {voteCount} votes</span>
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addOption}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Option
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addOption}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Option
-            </Button>
+
+            {options && options.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={option.text}
+                  onChange={(e) => updateOption(index, e.target.value)}
+                  placeholder={`Option ${index + 1}`}
+                />
+                {options && options.length > 2 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeOption(index)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+
+            {errors.options && (
+              <p className="text-sm text-red-500">{errors.options.message}</p>
+            )}
           </div>
-
-          {options.map((option, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <Input
-                value={option.text}
-                onChange={(e) => updateOption(index, e.target.value)}
-                placeholder={`Option ${index + 1}`}
-              />
-              {options.length > 2 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeOption(index)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          ))}
-
-          {errors.options && (
-            <p className="text-sm text-red-500">{errors.options.message}</p>
-          )}
-        </div>
+        )}
 
         <div className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={onSuccess}>

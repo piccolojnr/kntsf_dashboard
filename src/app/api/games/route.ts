@@ -4,6 +4,7 @@ import {
     updateWeeklyScore,
     getPlayerWeeklyRank,
     getHistoricalWeeklyLeaderboard,
+    getCurrentWeekTopScore,
 } from '@/lib/services/game.service';
 
 // GET /api/games/leaderboard?gameId=...&userId=...&page=...&pageSize=...
@@ -16,15 +17,24 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '1', 10);
         const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
 
-
         if (historical && weekStart) {
             const weekStartDate = new Date(weekStart);
-            const leaderboard = await getHistoricalWeeklyLeaderboard(weekStartDate, { page, pageSize });
-            return NextResponse.json({ success: true, data: leaderboard });
+            const result = await getHistoricalWeeklyLeaderboard(weekStartDate, { page, pageSize });
+            return NextResponse.json({
+                success: true,
+                data: result.leaderboard,
+                pagination: result.pagination
+            });
         }
 
-        const leaderboard = await getCurrentWeeklyLeaderboard(userId, { page, pageSize });
-        return NextResponse.json({ success: true, data: leaderboard });
+        const result = await getCurrentWeeklyLeaderboard(userId, { page, pageSize });
+        const topScore = await getCurrentWeekTopScore();
+        return NextResponse.json({
+            success: true,
+            data: result.leaderboard,
+            pagination: result.pagination,
+            topScore
+        });
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });

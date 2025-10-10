@@ -147,11 +147,17 @@ async function getOrCreateCurrentPeriod() {
 }
 
 // Fetch current leaderboard for a game and period
-export async function getCurrentWeeklyLeaderboard(currentUserId?: string, options?: { page?: number; pageSize?: number }): Promise<WeeklyLeaderboardEntry[]> {
+export async function getCurrentWeeklyLeaderboard(currentUserId?: string, options?: { page?: number; pageSize?: number }): Promise<{ leaderboard: WeeklyLeaderboardEntry[]; pagination: { page: number; pageSize: number; total: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean } }> {
     const period = await getOrCreateCurrentPeriod();
     const page = options?.page ?? 1;
     const pageSize = options?.pageSize ?? 50;
     const skip = (page - 1) * pageSize;
+
+    // Get total count
+    const total = await prisma.leaderboardEntry.count({
+        where: { periodId: period.id },
+    });
+
     const entries = await prisma.leaderboardEntry.findMany({
         where: { periodId: period.id },
         orderBy: { totalScore: 'desc' },
@@ -159,6 +165,7 @@ export async function getCurrentWeeklyLeaderboard(currentUserId?: string, option
         skip,
         take: pageSize,
     });
+
     const leaderboard = entries.map(entry => ({
         userId: entry.userId,
         playerName: entry.playerName,
@@ -169,18 +176,38 @@ export async function getCurrentWeeklyLeaderboard(currentUserId?: string, option
         periodId: entry.periodId,
         isCurrentUser: currentUserId ? entry.userId === currentUserId : false,
     }));
-    return leaderboard;
+
+    const totalPages = Math.ceil(total / pageSize);
+
+    return {
+        leaderboard,
+        pagination: {
+            page,
+            pageSize,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+        }
+    };
 }
 
 // Fetch historical leaderboard for a given week
-export async function getHistoricalWeeklyLeaderboard(weekStart: Date, options?: { page?: number; pageSize?: number }): Promise<WeeklyLeaderboardEntry[]> {
+export async function getHistoricalWeeklyLeaderboard(weekStart: Date, options?: { page?: number; pageSize?: number }): Promise<{ leaderboard: WeeklyLeaderboardEntry[]; pagination: { page: number; pageSize: number; total: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean } }> {
     const period = await prisma.leaderboardPeriod.findFirst({
         where: { startDate: weekStart },
     });
-    if (!period) return [];
+    if (!period) return { leaderboard: [], pagination: { page: 1, pageSize: 50, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } };
+
     const page = options?.page ?? 1;
     const pageSize = options?.pageSize ?? 50;
     const skip = (page - 1) * pageSize;
+
+    // Get total count
+    const total = await prisma.leaderboardEntry.count({
+        where: { periodId: period.id },
+    });
+
     const entries = await prisma.leaderboardEntry.findMany({
         where: { periodId: period.id },
         orderBy: { totalScore: 'desc' },
@@ -188,7 +215,8 @@ export async function getHistoricalWeeklyLeaderboard(weekStart: Date, options?: 
         skip,
         take: pageSize,
     });
-    return entries.map(entry => ({
+
+    const leaderboard = entries.map(entry => ({
         userId: entry.userId,
         user: entry.user,
         playerName: entry.playerName,
@@ -197,6 +225,20 @@ export async function getHistoricalWeeklyLeaderboard(weekStart: Date, options?: 
         avgScore: entry.avgScore,
         periodId: entry.periodId,
     }));
+
+    const totalPages = Math.ceil(total / pageSize);
+
+    return {
+        leaderboard,
+        pagination: {
+            page,
+            pageSize,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+        }
+    };
 }
 
 // Update or create leaderboard entry for the current period
@@ -231,8 +273,8 @@ export async function updateWeeklyScore(userId: string, playerName: string, game
 
 // Get player's rank for the current period
 export async function getPlayerWeeklyRank(userId: string): Promise<number | null> {
-    const leaderboard = await getCurrentWeeklyLeaderboard();
-    const playerIndex = leaderboard.findIndex(entry => entry.userId === userId);
+    const result = await getCurrentWeeklyLeaderboard();
+    const playerIndex = result.leaderboard.findIndex(entry => entry.userId === userId);
     return playerIndex >= 0 ? playerIndex + 1 : null;
 }
 
@@ -253,4 +295,15 @@ export async function getPreviousWeekWinner(): Promise<WeeklyLeaderboardEntry | 
         include: { user: true },
     });
     return winner || null;
+}
+
+// Get current week's top score
+export async function getCurrentWeekTopScore(): Promise<number> {
+    const period = await getOrCreateCurrentPeriod();
+    const topEntry = await prisma.leaderboardEntry.findFirst({
+        where: { periodId: period.id },
+        orderBy: { totalScore: 'desc' },
+        select: { totalScore: true },
+    });
+    return topEntry?.totalScore || 0;
 }

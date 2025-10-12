@@ -6,6 +6,7 @@ import { ServiceResponse } from '../types/common'
 import { generatePermitEmailTemplate } from '../email/templates-views/permit-email-template'
 import { generateReceiptEmailTemplate } from '../email/templates-views/receipt-email-template'
 import { generateRevokedPermitEmailTemplate } from '../email/templates-views/revoked-permit-email-template'
+import { generatePasswordResetEmailTemplate } from '../email/templates-views/password-reset-email-template'
 import { render } from '@react-email/components'
 import { handleError } from '../utils'
 import { generateContactEmailTemplate } from '../email/templates-views/contact-email-template'
@@ -149,6 +150,21 @@ export async function sendContactEmail({ name, email, subject, message }: { name
     return { success: true }
   } catch (error) {
     log.error('Error sending contact form email:', error)
+    return handleError(error)
+  }
+}
+
+export async function sendPasswordResetEmail({ email, name, username, resetToken }: { email: string, name: string, username: string, resetToken: string }): Promise<ServiceResponse> {
+  try {
+    const passwordResetEmail = generatePasswordResetEmailTemplate({ name, username, resetToken })
+    await sendEmail({
+      to: email,
+      subject: 'Game Hub - Password Reset Request',
+      template: passwordResetEmail,
+    })
+    return { success: true }
+  } catch (error) {
+    log.error('Error sending password reset email:', error)
     return handleError(error)
   }
 }

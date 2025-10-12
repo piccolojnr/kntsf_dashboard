@@ -10,38 +10,40 @@ datasource db {
 model User {
   id                  Int             @id @default(autoincrement())
   username            String          @unique
-  name                String          @default("")
   email               String          @unique
-  image               String? // URL to user profile image
-  password            String // Hashed password
-  role                Role            @relation(fields: [roleId], references: [id])
+  password            String
   roleId              Int
-  position            String? // Executive position/title
-  positionDescription String?         @db.Text // Short summary of role
-  biography           String?         @db.Text // User profile
-  socialLinks         Json? // Social media links stored as JSON
-  category            String? // Classification (main_executive, other_executive, all_present)
-  index               Int             @default(0) // For custom ordering
-  published           Boolean         @default(true) // To control visibility
-  permits             Permit[] // Permits issued by this user
-  auditLogs           AuditLog[]
-  recoveryTokens      RecoveryToken[]
-  newsArticles        NewsArticle[] // News articles written by this user
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
-  Event               Event[]
-  Newsletter          Newsletter[]
+  biography           String?         @db.Text
+  category            String?
+  position            String?
+  positionDescription String?         @db.Text
+  socialLinks         Json?
+  name                String          @default("")
+  image               String?
+  index               Int             @default(0)
+  published           Boolean         @default(true)
+  auditLogs           AuditLog[]
   Document            Document[]
+  Event               Event[]
+  newsArticles        NewsArticle[]
+  Newsletter          Newsletter[]
+  permits             Permit[]
+  recoveryTokens      RecoveryToken[]
   StudentIdea         StudentIdea[]
+  role                Role            @relation(fields: [roleId], references: [id])
+
+  @@index([roleId], map: "User_roleId_fkey")
 }
 
 model Role {
   id          Int      @id @default(autoincrement())
   name        String   @unique
   description String?
-  users       User[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  users       User[]
 }
 
 model Student {
@@ -52,15 +54,15 @@ model Student {
   course      String?
   level       String?
   number      String?
-  permits     Permit[] // Permits issued to this student
-  payments    Payment[] // Payments made by this student
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  deletedAt   DateTime? // Soft delete
-  StudentIdea StudentIdea[]
+  deletedAt   DateTime?
   GameUser    GameUser?
-  pollVotes   PollVote[] // Votes cast by this student
-  pollOptions PollOption[] // Options created by this student
+  payments    Payment[]
+  permits     Permit[]
+  pollOptions PollOption[]
+  pollVotes   PollVote[]
+  StudentIdea StudentIdea[]
 
   @@index([studentId])
   @@index([email])
@@ -68,64 +70,65 @@ model Student {
 
 model Permit {
   id           Int      @id @default(autoincrement())
-  permitCode   String   @unique // Hashed permit code
-  originalCode String   @unique // Original permit code
-  permitHash   String? // Hash of the permit code for efficient lookup
-  status       String   @default("active") // active, revoked, expired
+  permitCode   String   @unique
+  originalCode String   @unique
+  status       String   @default("active")
   startDate    DateTime @default(now())
   expiryDate   DateTime
   amountPaid   Float
-  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId    Int
-  issuedBy     User?    @relation(fields: [issuedById], references: [id])
   issuedById   Int?
-  payment      Payment? // Payment record for this permit
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  permitHash   String?
+  payment      Payment?
+  issuedBy     User?    @relation(fields: [issuedById], references: [id])
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([permitCode, status])
   @@index([permitHash, status])
+  @@index([issuedById], map: "Permit_issuedById_fkey")
+  @@index([studentId], map: "Permit_studentId_fkey")
 }
 
 model AuditLog {
   id        Int      @id @default(autoincrement())
   action    String
-  user      User     @relation(fields: [userId], references: [id])
   userId    Int
   details   String
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "AuditLog_userId_fkey")
 }
 
 model RecoveryToken {
   id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
   userId    Int
   token     String   @unique
   expires   DateTime
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "RecoveryToken_userId_fkey")
 }
 
 model Payment {
   id               Int           @id @default(autoincrement())
-  student          Student       @relation(fields: [studentId], references: [id])
   studentId        Int
   amount           Float
   currency         String        @default("GHS")
   paymentReference String        @unique
   paystackRef      String?       @unique
   status           PaymentStatus @default(PENDING)
-  permit           Permit?       @relation(fields: [permitId], references: [id])
   permitId         Int?          @unique
   metadata         Json?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-}
+  permit           Permit?       @relation(fields: [permitId], references: [id])
+  student          Student       @relation(fields: [studentId], references: [id])
 
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  CANCELLED
+  @@index([studentId], map: "Payment_studentId_fkey")
 }
 
 model NewsArticle {
@@ -134,18 +137,20 @@ model NewsArticle {
   slug          String    @unique
   content       String    @db.Text
   excerpt       String    @db.Text
-  image         String // Primary/featured image - Cloudinary URL
-  images        Json? // Array of additional images with metadata
-  category      String // News category (e.g., "Announcements", "Updates", "Education", "Academic")
-  categoryColor String // Tailwind classes
+  image         String
+  category      String
+  categoryColor String
   featured      Boolean   @default(false)
   published     Boolean   @default(false)
   publishedAt   DateTime?
-  author        User      @relation(fields: [authorId], references: [id])
   authorId      Int
   readTime      String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  images        Json?
+  author        User      @relation(fields: [authorId], references: [id])
+
+  @@index([authorId], map: "NewsArticle_authorId_fkey")
 }
 
 model Event {
@@ -154,31 +159,33 @@ model Event {
   slug             String    @unique
   description      String    @db.Text
   excerpt          String    @db.Text
-  image            String // Primary/featured image - Cloudinary URL
-  images           Json? // Array of additional images with metadata
+  image            String
   date             DateTime
-  time             String // Store time as string (e.g., "14:00")
+  time             String
   location         String
-  category         String // Event category (e.g., "Academic", "Social", "Sports", "Cultural")
-  categoryColor    String // Tailwind classes
+  category         String
+  categoryColor    String
   featured         Boolean   @default(false)
   published        Boolean   @default(false)
   publishedAt      DateTime?
   maxAttendees     Int       @default(0)
   currentAttendees Int       @default(0)
-  organizer        User      @relation(fields: [organizerId], references: [id])
   organizerId      Int
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  images           Json?
+  organizer        User      @relation(fields: [organizerId], references: [id])
+
+  @@index([organizerId], map: "Event_organizerId_fkey")
 }
 
 model Config {
   id             Int             @id @default(autoincrement())
-  contactInfo    ContactInfo?
-  semesterConfig SemesterConfig?
-  permitConfig   PermitConfig?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  contactInfo    ContactInfo?
+  permitConfig   PermitConfig?
+  semesterConfig SemesterConfig?
 }
 
 model ContactInfo {
@@ -187,36 +194,36 @@ model ContactInfo {
   phone       String?
   address     String?  @db.Text
   website     String?
-  config      Config   @relation(fields: [configId], references: [id])
-  socialLinks Json? // Social media links
   configId    Int      @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  socialLinks Json?
+  config      Config   @relation(fields: [configId], references: [id])
 }
 
 model SemesterConfig {
   id              Int      @id @default(autoincrement())
-  currentSemester String // e.g., "2023/2024"
-  academicYear    String // e.g., "2023/2024"
+  currentSemester String
+  academicYear    String
   startDate       DateTime
   endDate         DateTime
   isActive        Boolean  @default(true)
-  config          Config   @relation(fields: [configId], references: [id])
   configId        Int      @unique
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  config          Config   @relation(fields: [configId], references: [id])
 }
 
 model PermitConfig {
   id                  Int      @id @default(autoincrement())
   expirationDate      DateTime @default(now())
-  defaultAmount       Float    @default(0.0)
+  defaultAmount       Float    @default(0)
   currency            String   @default("GHS")
-  enablePermitRequest Boolean  @default(false)
-  config              Config   @relation(fields: [configId], references: [id])
   configId            Int      @unique
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  enablePermitRequest Boolean  @default(false)
+  config              Config   @relation(fields: [configId], references: [id])
 }
 
 model NewsletterSubscriber {
@@ -225,15 +232,9 @@ model NewsletterSubscriber {
   name      String?
   studentId Int
   status    SubscriptionStatus @default(PENDING)
-  token     String             @unique // For email verification
+  token     String             @unique
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
-}
-
-enum SubscriptionStatus {
-  PENDING
-  ACTIVE
-  UNSUBSCRIBED
 }
 
 model Newsletter {
@@ -242,69 +243,62 @@ model Newsletter {
   content   String           @db.Text
   status    NewsletterStatus @default(DRAFT)
   sentAt    DateTime?
-  sentBy    User             @relation(fields: [sentById], references: [id])
   sentById  Int
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
-}
+  sentBy    User             @relation(fields: [sentById], references: [id])
 
-enum NewsletterStatus {
-  DRAFT
-  SCHEDULED
-  SENT
-  FAILED
+  @@index([sentById], map: "Newsletter_sentById_fkey")
 }
 
 model Document {
   id           Int      @id @default(autoincrement())
   title        String
   description  String?  @db.Text
-  category     String // e.g., "Academic", "Student Life", "Administrative"
-  fileUrl      String // Cloudinary URL
-  fileType     String // e.g., "pdf", "doc", "docx"
-  fileSize     Int // Size in bytes
+  category     String
+  fileUrl      String
+  fileType     String
+  fileSize     Int
   downloads    Int      @default(0)
   isPublic     Boolean  @default(true)
-  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
   uploadedById Int
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+
+  @@index([uploadedById], map: "Document_uploadedById_fkey")
 }
 
 model StudentIdea {
   id           Int        @id @default(autoincrement())
   title        String
   description  String     @db.Text
-  category     String // e.g., "Academic", "Student Life", "Administrative"
+  category     String
   status       IdeaStatus @default(PENDING)
-  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId    Int
-  reviewedBy   User?      @relation(fields: [reviewedById], references: [id])
   reviewedById Int?
   reviewNotes  String?    @db.Text
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-}
+  reviewedBy   User?      @relation(fields: [reviewedById], references: [id])
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-enum IdeaStatus {
-  PENDING
-  UNDER_REVIEW
-  APPROVED
-  REJECTED
-  IMPLEMENTED
+  @@index([reviewedById], map: "StudentIdea_reviewedById_fkey")
+  @@index([studentId], map: "StudentIdea_studentId_fkey")
 }
 
 model GameUser {
-  id                 String              @id @default(uuid())
-  username           String              @unique
-  avatarUrl          String?             @db.VarChar(255)
-  password           String              @db.VarChar(255)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  studentId          Int                 @unique
-  student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  leaderboardEntries LeaderboardEntry[]
-  leaderboardPeriods LeaderboardPeriod[]
+  id                  String                   @id @default(uuid())
+  username            String                   @unique
+  avatarUrl           String?                  @db.VarChar(255)
+  password            String                   @db.VarChar(255)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  studentId           Int                      @unique
+  passwordResetTokens GamePasswordResetToken[]
+  student             Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  leaderboardEntries  LeaderboardEntry[]
+  leaderboardPeriods  LeaderboardPeriod[]
 
   @@index([username])
   @@index([createdAt])
@@ -315,39 +309,40 @@ model LeaderboardPeriod {
   id        String             @id @default(uuid())
   startDate DateTime
   endDate   DateTime
-  winnerId  String? // optional until calculated
-  winner    GameUser?          @relation(fields: [winnerId], references: [id])
+  winnerId  String?
   entries   LeaderboardEntry[]
+  winner    GameUser?          @relation(fields: [winnerId], references: [id])
 
-  @@unique([startDate, endDate]) // no overlapping periods for a game
+  @@unique([startDate, endDate])
+  @@index([winnerId], map: "LeaderboardPeriod_winnerId_fkey")
 }
 
 model LeaderboardEntry {
-  id          String   @id @default(uuid())
+  id          String            @id @default(uuid())
   userId      String
-  periodId    String
+  playerName  String
   totalScore  Int
   gamesPlayed Int
   avgScore    Int
-  playerName  String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime          @default(now())
+  periodId    String
+  period      LeaderboardPeriod @relation(fields: [periodId], references: [id])
+  user        GameUser          @relation(fields: [userId], references: [id])
 
-  user   GameUser          @relation(fields: [userId], references: [id])
-  period LeaderboardPeriod @relation(fields: [periodId], references: [id])
-
-  @@unique([userId, periodId]) // one entry per user per period
+  @@unique([userId, periodId])
+  @@index([periodId], map: "LeaderboardEntry_periodId_fkey")
 }
 
 model Poll {
-  id          Int         @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   title       String
-  description String?     @db.Text
-  type        PollType    @default(FIXED_OPTIONS)
+  description String?      @db.Text
   startAt     DateTime
   endAt       DateTime
-  showResults Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  showResults Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  type        PollType     @default(FIXED_OPTIONS)
   options     PollOption[]
   votes       PollVote[]
 
@@ -356,45 +351,89 @@ model Poll {
   @@index([type])
 }
 
-enum PollType {
-  FIXED_OPTIONS
-  DYNAMIC_OPTIONS
-}
-
 model PollOption {
-  id          Int           @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   text        String
   pollId      Int
-  poll        Poll          @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  createdBy   Student?      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   createdById Int?
-  status      OptionStatus  @default(ACTIVE)
+  status      OptionStatus @default(ACTIVE)
+  createdBy   Student?     @relation(fields: [createdById], references: [id])
+  poll        Poll         @relation(fields: [pollId], references: [id], onDelete: Cascade)
   votes       PollVote[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
 
   @@index([pollId])
   @@index([createdById])
   @@index([status])
 }
 
-enum OptionStatus {
-  ACTIVE
-  MERGED
-}
-
 model PollVote {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   pollId    Int
   optionId  Int
   studentId Int
-  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([pollId, studentId]) // one vote per student per poll
+  @@unique([pollId, studentId])
   @@index([pollId])
   @@index([studentId])
+  @@index([optionId], map: "PollVote_optionId_fkey")
+}
+
+model GamePasswordResetToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  expires    DateTime
+  used       Boolean  @default(false)
+  gameUserId String
+  createdAt  DateTime @default(now())
+  gameUser   GameUser @relation(fields: [gameUserId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expires])
+  @@index([used])
+  @@index([gameUserId], map: "GamePasswordResetToken_gameUserId_fkey")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+enum NewsletterStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  FAILED
+}
+
+enum IdeaStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  IMPLEMENTED
+}
+
+enum PollType {
+  FIXED_OPTIONS
+  DYNAMIC_OPTIONS
+}
+
+enum OptionStatus {
+  ACTIVE
+  MERGED
 }

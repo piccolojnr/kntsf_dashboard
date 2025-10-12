@@ -5,6 +5,7 @@ import prisma from "../prisma/client";
 import cloudinary from '@/lib/cloudinary';
 import { getCurrentWeekEnd, getCurrentWeekStart } from "../weekly-leaderboard";
 import { GameUser } from "@prisma/client";
+import { randomBytes } from "crypto";
 
 
 
@@ -306,4 +307,119 @@ export async function getCurrentWeekTopScore(): Promise<number> {
         select: { totalScore: true },
     });
     return topEntry?.totalScore || 0;
+}
+
+// Password Reset Functions
+export async function generatePasswordResetToken(identifier: string) {
+    // Try to find user by username first, then by student ID
+    let user = await prisma.gameUser.findUnique({
+        where: { username: identifier },
+        include: { student: true }
+    });
+
+    // If not found by username, try to find by student ID
+    if (!user) {
+        user = await prisma.gameUser.findFirst({
+            where: {
+                student: {
+                    studentId: identifier
+                }
+            },
+            include: { student: true }
+        });
+    }
+
+    if (!user) {
+        return { error: "User not found. Please check your username or student ID." };
+    }
+
+    // Check if student has an email address
+    if (!user.student.email) {
+        return { error: "No email address found for this account. Please contact support to add an email address." };
+    }
+
+    // Generate a secure random token
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+
+    // Delete any existing tokens for this user
+    await prisma.gamePasswordResetToken.deleteMany({
+        where: { gameUserId: user.id }
+    });
+
+    // Create new token
+    await prisma.gamePasswordResetToken.create({
+        data: {
+            token,
+            expires,
+            gameUserId: user.id
+        }
+    });
+
+    return {
+        data: {
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.student.email,
+                name: user.student.name
+            }
+        }
+    };
+}
+
+export async function validatePasswordResetToken(token: string) {
+    const resetToken = await prisma.gamePasswordResetToken.findUnique({
+        where: { token },
+        include: { gameUser: { include: { student: true } } }
+    });
+
+    if (!resetToken) {
+        return { error: "Invalid or expired token" };
+    }
+
+    if (resetToken.used) {
+        return { error: "Token has already been used" };
+    }
+
+    if (resetToken.expires < new Date()) {
+        return { error: "Token has expired" };
+    }
+
+    return {
+        data: {
+            user: {
+                id: resetToken.gameUser.id,
+                username: resetToken.gameUser.username,
+                email: resetToken.gameUser.student.email,
+                name: resetToken.gameUser.student.name
+            }
+        }
+    };
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+    const tokenValidation = await validatePasswordResetToken(token);
+
+    if (tokenValidation.error) {
+        return tokenValidation;
+    }
+
+    const hashedPassword = await hash(newPassword, 10);
+
+    // Update password and mark token as used
+    await prisma.$transaction(async (tx) => {
+        await tx.gameUser.update({
+            where: { id: tokenValidation.data!.user.id },
+            data: { password: hashedPassword }
+        });
+
+        await tx.gamePasswordResetToken.update({
+            where: { token },
+            data: { used: true }
+        });
+    });
+
+    return { success: true };
 }

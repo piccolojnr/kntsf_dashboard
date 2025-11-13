@@ -1,11 +1,9 @@
 import prisma from '@/lib/prisma/client'
 import { PaymentInitiationRequest, PaymentInitiationResponse, StudentData } from '@/types/payment'
 import { nanoid } from 'nanoid'
+import { getPaymentGateway } from './payment-gateway.factory'
 
 export class PaymentService {
-    private static readonly PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
-    private static readonly PAYSTACK_BASE_URL = 'https://api.paystack.co'
-
     private static async findOrCreateStudent(studentId: string, studentData?: StudentData) {
         try {
             let student = await prisma.student.findUnique({
@@ -39,39 +37,11 @@ export class PaymentService {
         }
     }
 
-    private static async initializePaystackTransaction(
-        email: string,
-        amount: number,
-        reference: string,
-        callback_url: string,
-        metadata?: Record<string, any>
-    ) {
-        const response = await fetch(`${this.PAYSTACK_BASE_URL}/transaction/initialize`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.PAYSTACK_SECRET_KEY}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email,
-                amount: amount * 100, // Convert to kobo
-                reference,
-                metadata,
-                callback_url,
-            }),
-        })
-
-        if (!response.ok) {
-            throw new Error('Failed to initialize Paystack transaction')
-        }
-
-        return response.json()
-    }
 
     public static async initiatePayment(
         request: PaymentInitiationRequest
     ): Promise<PaymentInitiationResponse> {
-        const { studentId, studentData, amount, callback_url, currency = 'NGN', metadata } = request
+        const { studentId, studentData, amount, callback_url, currency = 'GHS', metadata } = request
         // Find or create student
         const student = await this.findOrCreateStudent(studentId, studentData)
 
@@ -90,29 +60,33 @@ export class PaymentService {
         })
 
         try {
-            // Initialize Paystack transaction
-            const paystackResponse = await this.initializePaystackTransaction(
-                student.email || "",
+            // Get the active payment gateway
+            const gateway = getPaymentGateway()
+
+            // Initialize payment transaction
+            const gatewayResponse = await gateway.initializeTransaction({
+                email: student.email || "",
                 amount,
-                paymentReference,
+                reference: paymentReference,
                 callback_url,
-                metadata
-            )
+                currency,
+                metadata: {
+                    ...metadata,
+                    name: student.name || studentData?.name,
+                    phoneNumber: student.number || studentData?.number,
+                },
+            })
 
-            if (!paystackResponse.data || !paystackResponse.data.authorization_url) {
-                throw new Error('Paystack transaction initialization failed')
-            }
-
-            // Update payment record with Paystack reference
+            // Update payment record with gateway reference
             await prisma.payment.update({
                 where: { id: payment.id },
                 data: {
-                    paystackRef: paystackResponse.data.reference,
+                    gatewayRef: gatewayResponse.reference,
                 },
             })
 
             return {
-                checkoutUrl: paystackResponse.data.authorization_url,
+                checkoutUrl: gatewayResponse.checkoutUrl,
                 reference: paymentReference,
                 status: payment.status,
             }

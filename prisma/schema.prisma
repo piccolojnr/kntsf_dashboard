@@ -119,7 +119,7 @@ model Payment {
   amount           Float
   currency         String        @default("GHS")
   paymentReference String        @unique
-  paystackRef      String?       @unique
+  gatewayRef       String?       @unique
   status           PaymentStatus @default(PENDING)
   permitId         Int?          @unique
   metadata         Json?

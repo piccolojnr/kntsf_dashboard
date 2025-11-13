@@ -2,16 +2,16 @@
 
 import { useCallback, useState } from "react";
 import { format } from "date-fns";
-import { 
-  ArrowLeft, 
-  CreditCard, 
-  FileText, 
-  Mail, 
-  Phone, 
-  User, 
+import {
+  ArrowLeft,
+  CreditCard,
+  FileText,
+  Mail,
+  Phone,
+  User,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,10 @@ interface PermitDetailClientProps {
   permit: any; // Will be properly typed based on the service response
 }
 
-export function PermitDetailClient({ permissions, permit }: PermitDetailClientProps) {
+export function PermitDetailClient({
+  permissions,
+  permit,
+}: PermitDetailClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isResendDialogOpen, setIsResendDialogOpen] = useState(false);
@@ -43,7 +46,10 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
   const status = isExpired ? "expired" : permit.status;
   const daysRemaining = Math.max(
     0,
-    Math.ceil((new Date(permit.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    Math.ceil(
+      (new Date(permit.expiryDate).getTime() - new Date().getTime()) /
+        (1000 * 60 * 60 * 24)
+    )
   );
 
   const getStatusIcon = () => {
@@ -90,8 +96,6 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
   const openResendDialog = useCallback(() => {
     setIsResendDialogOpen(true);
   }, []);
-
-
 
   const handleRevoke = useCallback(async () => {
     if (!permissions.isExecutive) {
@@ -144,7 +148,12 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
       return;
     }
 
-    if (!confirm("Are you sure you want to delete this permit? This action cannot be undone and will also delete the associated payment record.")) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this permit? This action cannot be undone and will also delete the associated payment record."
+      )
+    )
+      return;
 
     try {
       setIsDeleting(true);
@@ -179,13 +188,15 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Permit Details</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Permit Details
+            </h1>
             <p className="text-muted-foreground">
               Permit Code: {permit.originalCode}
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {permit.status === "active" && (
             <Button
@@ -206,10 +217,7 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
             </Button>
           )}
           {permit.status !== "revoked" && (
-            <Button
-              variant="outline"
-              onClick={openResendDialog}
-            >
+            <Button variant="outline" onClick={openResendDialog}>
               <Mail className="w-4 h-4 mr-2" />
               Resend Email
             </Button>
@@ -234,18 +242,25 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </Badge>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Days Remaining</p>
-                  <p className={`text-2xl font-bold ${
-                    daysRemaining <= 30 ? "text-red-600" : 
-                    daysRemaining <= 60 ? "text-yellow-600" : "text-green-600"
-                  }`}>
+                  <p className="text-sm text-muted-foreground">
+                    Days Remaining
+                  </p>
+                  <p
+                    className={`text-2xl font-bold ${
+                      daysRemaining <= 30
+                        ? "text-red-600"
+                        : daysRemaining <= 60
+                          ? "text-yellow-600"
+                          : "text-green-600"
+                    }`}
+                  >
                     {daysRemaining}
                   </p>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Start Date</p>
@@ -288,7 +303,9 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Course</p>
-                  <p className="font-medium">{permit.student.course || "N/A"}</p>
+                  <p className="font-medium">
+                    {permit.student.course || "N/A"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Level</p>
@@ -298,14 +315,18 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
                   <p className="text-sm text-muted-foreground">Email</p>
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-muted-foreground" />
-                    <p className="font-medium">{permit.student.email || "N/A"}</p>
+                    <p className="font-medium">
+                      {permit.student.email || "N/A"}
+                    </p>
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
-                    <p className="font-medium">{permit.student.number || "N/A"}</p>
+                    <p className="font-medium">
+                      {permit.student.number || "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -325,19 +346,25 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Amount Paid</p>
+                      <p className="text-sm text-muted-foreground">
+                        Amount Paid
+                      </p>
                       <p className="text-2xl font-bold text-green-600">
                         GHS {permit.amountPaid.toFixed(2)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Payment Status</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment Status
+                      </p>
                       <Badge className={`${getPaymentStatusColor()} border`}>
                         {permit.payment.status}
                       </Badge>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Payment Reference</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment Reference
+                      </p>
                       <p className="font-medium font-mono text-sm">
                         {permit.payment.paymentReference}
                       </p>
@@ -347,25 +374,31 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
                       <p className="font-medium">{permit.payment.currency}</p>
                     </div>
                   </div>
-                  
-                  {permit.payment.paystackRef && (
+
+                  {permit.payment.gatewayRef && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Paystack Reference</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment Gateway Reference
+                      </p>
                       <p className="font-medium font-mono text-sm">
-                        {permit.payment.paystackRef}
+                        {permit.payment.gatewayRef}
                       </p>
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Payment Date</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment Date
+                      </p>
                       <p className="font-medium">
                         {format(new Date(permit.payment.createdAt), "PPP")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Last Updated</p>
+                      <p className="text-sm text-muted-foreground">
+                        Last Updated
+                      </p>
                       <p className="font-medium">
                         {format(new Date(permit.payment.updatedAt), "PPP")}
                       </p>
@@ -375,7 +408,9 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
               ) : (
                 <div className="text-center py-8">
                   <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No payment information available</p>
+                  <p className="text-muted-foreground">
+                    No payment information available
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -395,25 +430,27 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Permit Code</p>
-                <p className="font-mono font-bold text-lg">{permit.originalCode}</p>
+                <p className="font-mono font-bold text-lg">
+                  {permit.originalCode}
+                </p>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <p className="text-sm text-muted-foreground">Issued By</p>
                 <p className="font-medium">
                   {permit.issuedBy?.username || "Unknown"}
                 </p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-muted-foreground">Issue Date</p>
                 <p className="font-medium">
                   {format(new Date(permit.createdAt), "PPP")}
                 </p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-muted-foreground">Last Updated</p>
                 <p className="font-medium">
@@ -441,7 +478,7 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
                     {isRevoking ? "Revoking..." : "Revoke Permit"}
                   </Button>
                 )}
-                
+
                 {permit.status === "revoked" && (
                   <Button
                     variant="destructive"
@@ -453,7 +490,7 @@ export function PermitDetailClient({ permissions, permit }: PermitDetailClientPr
                     {isDeleting ? "Deleting..." : "Delete Permit"}
                   </Button>
                 )}
-                
+
                 {permit.status !== "revoked" && (
                   <Button
                     variant="outline"

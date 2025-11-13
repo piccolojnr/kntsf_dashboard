@@ -1,36 +1,9 @@
 import prisma from '@/lib/prisma/client'
 import services from '@/lib/services'
 import { Payment, PaymentStatus, Permit, Student } from '@prisma/client'
-import crypto from 'crypto'
+import { getPaymentGateway } from './payment-gateway.factory'
 
 export class PaymentVerificationService {
-    private static readonly PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
-    private static readonly PAYSTACK_BASE_URL = 'https://api.paystack.co'
-
-    private static verifyPaystackSignature(payload: string, signature: string): boolean {
-        const hash = crypto
-            .createHmac('sha512', this.PAYSTACK_SECRET_KEY!)
-            .update(payload)
-            .digest('hex')
-        return hash === signature
-    }
-
-    private static async verifyPaystackTransaction(reference: string) {
-        const response = await fetch(
-            `${this.PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${this.PAYSTACK_SECRET_KEY}`,
-                },
-            }
-        )
-
-        if (!response.ok) {
-            throw new Error('Failed to verify Paystack transaction')
-        }
-
-        return response.json()
-    }
 
     public static async verifyPayment(reference: string): Promise<{
         status: PaymentStatus,
@@ -42,36 +15,57 @@ export class PaymentVerificationService {
         permit: Permit | null,
     }> {
         try {
-            const payment = await prisma.payment.findUnique({
+            // Get the active payment gateway first to determine lookup strategy
+            const gateway = getPaymentGateway()
+            const gatewayType = process.env.PAYMENT_GATEWAY || 'expresspay'
+
+            console.log(`Verifying payment with reference: ${reference}, gateway: ${gatewayType}`)
+
+            // Try to find payment by paymentReference first (order-id for ExpressPay)
+            let payment = await prisma.payment.findUnique({
                 where: { paymentReference: reference },
                 include: { student: true },
             })
 
+            // For ExpressPay: if not found by paymentReference, try gatewayRef (token)
+            // This handles cases where token is passed directly
+            if (!payment && gatewayType.toLowerCase() === 'expresspay') {
+                console.log(`Payment not found by paymentReference, trying gatewayRef lookup...`)
+                payment = await prisma.payment.findFirst({
+                    where: { gatewayRef: reference },
+                    include: { student: true },
+                })
+            }
+
             if (!payment) {
-                throw new Error('Payment not found')
+                console.error(`Payment not found for reference: ${reference}`)
+                throw new Error(`Payment not found for reference: ${reference}`)
             }
 
-            const paystackResponse = await this.verifyPaystackTransaction(reference)
+            console.log(`Payment found: ID=${payment.id}, paymentReference=${payment.paymentReference}, gatewayRef=${payment.gatewayRef ? '***' : 'null'}`)
 
-            if (!paystackResponse.data) {
-                throw new Error('Invalid Paystack response')
+            // For ExpressPay: gatewayRef contains token (used for query.php)
+            // For PayStack: gatewayRef contains PayStack reference
+            // If no gatewayRef, use paymentReference (fallback)
+            const verificationReference = payment.gatewayRef || reference
+
+            if (!verificationReference) {
+                throw new Error('No verification reference available for payment')
             }
 
-            const { status, gateway_response } = paystackResponse.data
+            console.log(`Using verification reference: ${verificationReference.substring(0, 20)}...`)
+
+            // Verify transaction using gateway
+            const verificationResult = await gateway.verifyTransaction(verificationReference)
 
             // Update payment status
-            const paymentStatus: PaymentStatus =
-                status === 'success' ? 'SUCCESS' :
-                    status === 'failed' ? 'FAILED' :
-                        'PENDING'
-
             await prisma.payment.update({
                 where: { id: payment.id },
                 data: {
-                    status: paymentStatus,
+                    status: verificationResult.status,
                     metadata: {
                         ...payment.metadata as Record<string, any>,
-                        verificationResponse: paystackResponse.data,
+                        verificationResponse: verificationResult.gatewayResponse,
                     },
                 },
             })
@@ -82,13 +76,13 @@ export class PaymentVerificationService {
                     username: string
                 } | null
             } | null = null
-            if (paymentStatus === 'SUCCESS' && !payment.permitId) {
+            if (verificationResult.status === 'SUCCESS' && !payment.permitId) {
                 const res = await services.permit.create({
                     studentId: payment.student.studentId + "",
                     paymentId: payment.id,
                 })
                 permit = res.data || null
-            } else if (paymentStatus === 'SUCCESS' && payment.permitId) {
+            } else if (verificationResult.status === 'SUCCESS' && payment.permitId) {
                 permit = await prisma.permit.findUnique({
                     where: { id: payment.permitId },
                     include: {
@@ -107,11 +101,11 @@ export class PaymentVerificationService {
             }
 
             return {
-                status: paymentStatus,
-                message: gateway_response,
-                transactionId: paystackResponse.data.id,
-                amount: payment.amount,
-                timestamp: paystackResponse.data.paid_at,
+                status: verificationResult.status,
+                message: verificationResult.message,
+                transactionId: verificationResult.transactionId,
+                amount: verificationResult.amount || payment.amount,
+                timestamp: verificationResult.timestamp,
                 payment,
                 permit: permit || null,
             }
@@ -123,59 +117,70 @@ export class PaymentVerificationService {
 
     public static async handleWebhook(payload: any, signature: string) {
         try {
-            // Verify Paystack signature
-            const isValid = this.verifyPaystackSignature(
-                JSON.stringify(payload),
-                signature
-            )
+            // Get the active payment gateway
+            const gateway = getPaymentGateway()
+
+            // Verify webhook signature
+            const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload)
+            const isValid = gateway.verifyWebhookSignature(payloadString, signature)
 
             if (!isValid) {
-                throw new Error('Invalid Paystack signature')
+                throw new Error('Invalid webhook signature')
             }
 
-            const { event, data } = payload
+            // Process webhook using gateway
+            const webhookResult = await gateway.handleWebhook(payload)
 
-            if (event === 'charge.success') {
-                const payment = await prisma.payment.findFirst({
-                    where: { paystackRef: data.reference },
+            // Find payment by gateway reference (token for ExpressPay, PayStack ref for PayStack)
+            // For ExpressPay: webhookResult.reference is the token (stored in gatewayRef)
+            // For PayStack: webhookResult.reference is the PayStack reference (stored in gatewayRef)
+            let payment = await prisma.payment.findFirst({
+                where: { gatewayRef: webhookResult.reference },
+                include: { student: true },
+            })
+
+            // Fallback: try paymentReference if gatewayRef lookup fails
+            if (!payment) {
+                payment = await prisma.payment.findFirst({
+                    where: { paymentReference: webhookResult.reference },
                     include: { student: true },
                 })
+            }
 
-                if (!payment) {
-                    throw new Error('Payment not found')
-                }
+            if (!payment) {
+                throw new Error('Payment not found')
+            }
 
-                // Update payment status
-                await prisma.payment.update({
-                    where: { id: payment.id },
-                    data: {
-                        status: 'SUCCESS',
-                        metadata: {
-                            ...payment.metadata as Record<string, any>,
-                            webhookData: data,
-                        },
+            // Update payment status
+            await prisma.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: webhookResult.status,
+                    metadata: {
+                        ...payment.metadata as Record<string, any>,
+                        webhookData: payload,
                     },
-                })
+                },
+            })
 
-                // Create permit if payment is successful
-                if (!payment.permitId) {
-                    await services.permit.create({
-                        studentId: payment.student.studentId + "",
-                        paymentId: payment.id,
-                    })
-                } else if (payment.permitId) {
-                    await prisma.permit.findUnique({
-                        where: { id: payment.permitId },
-                        include: {
-                            student: true,
-                            issuedBy: {
-                                select: {
-                                    username: true
-                                }
+            // Create permit if payment is successful
+            if (webhookResult.status === 'SUCCESS' && !payment.permitId) {
+                await services.permit.create({
+                    studentId: payment.student.studentId + "",
+                    paymentId: payment.id,
+                })
+            } else if (webhookResult.status === 'SUCCESS' && payment.permitId) {
+                await prisma.permit.findUnique({
+                    where: { id: payment.permitId },
+                    include: {
+                        student: true,
+                        issuedBy: {
+                            select: {
+                                username: true
                             }
                         }
-                    })
-                }
+                    }
+                })
             }
 
             return { success: true }

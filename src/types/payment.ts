@@ -24,6 +24,10 @@ export interface PaymentInitiationResponse {
     status: PaymentStatus
 }
 
+/**
+ * @deprecated Use gateway-specific response types from payment-gateway.interface.ts
+ * This interface is kept for backward compatibility only
+ */
 export interface PaystackResponse {
     status: boolean
     message: string

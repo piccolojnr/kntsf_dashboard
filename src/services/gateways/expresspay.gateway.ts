@@ -35,7 +35,7 @@ export class ExpressPayGateway implements IPaymentGateway {
         const merchantId = process.env.EXPRESSPAY_MERCHANT_ID
         const apiKey = process.env.EXPRESSPAY_API_KEY
         const baseUrl = process.env.EXPRESSPAY_API_BASE_URL || 'https://sandbox.expresspaygh.com/api'
-        const checkoutUrl = process.env.EXPRESSPAY_API_BASE_URL || 'https://sandbox.expresspaygh.com/api/checkout.php'
+        const checkoutUrl = process.env.EXPRESSPAY_API_CHECKOUT_URL || 'https://sandbox.expresspaygh.com/api/checkout.php'
 
         if (!merchantId) {
             throw new Error('EXPRESSPAY_MERCHANT_ID environment variable is required')

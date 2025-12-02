@@ -59,7 +59,7 @@ export function VerifyPaymentsDialog({
     setResults(null);
 
     try {
-      let filters: {
+      const filters: {
         startDate?: string;
         endDate?: string;
         reference?: string;

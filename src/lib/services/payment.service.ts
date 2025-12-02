@@ -5,6 +5,7 @@ import { log } from '../logger'
 import { ServiceResponse } from '../types/common'
 import { handleError } from '../utils'
 import { Payment, PaymentStatus } from '@prisma/client'
+import { PaymentVerificationService } from '@/services/payment-verification.service'
 
 export interface PaymentWithRelations extends Payment {
     student: {
@@ -422,5 +423,34 @@ export async function getPaymentsPaginated(filters: PaymentFilters = {}): Promis
     } catch (error) {
         log.error('Error fetching paginated payments:', error);
         return handleError(error);
+    }
+}
+
+export interface BulkVerificationFilters {
+    startDate?: string;
+    endDate?: string;
+    reference?: string;
+}
+
+export interface BulkVerificationResult {
+    total: number;
+    successful: number;
+    failed: number;
+    skipped: number;
+    errors: Array<{ paymentId: number; error: string }>;
+}
+
+export async function verifyPaymentsBulk(filters: BulkVerificationFilters): Promise<ServiceResponse<BulkVerificationResult>> {
+    try {
+        // Call PaymentVerificationService directly since this is a server action
+        const result = await PaymentVerificationService.verifyPaymentsBulk(filters)
+
+        return {
+            success: true,
+            data: result
+        }
+    } catch (error) {
+        log.error('Error verifying payments in bulk:', error)
+        return handleError(error)
     }
 }

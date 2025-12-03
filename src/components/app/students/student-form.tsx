@@ -170,8 +170,8 @@ export function StudentForm({
             {isSubmitting
               ? "Saving..."
               : student
-                ? "Update Student"
-                : "Add Student"}
+              ? "Update Student"
+              : "Add Student"}
           </Button>
         </DialogFooter>
       </form>

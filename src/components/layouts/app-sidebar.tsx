@@ -206,7 +206,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         {/* Search Bar */}
-        <form
+        {/* <form
           onSubmit={handleSearch}
           className={cn(
             "px-4 mb-4 mt-1",
@@ -240,7 +240,7 @@ export function AppSidebar({
               <Search className="w-4 h-4" />
             </button>
           </div>
-        </form>
+        </form> */}
         <NavMain items={filteredNavItems} />
       </SidebarContent>
       <SidebarFooter>

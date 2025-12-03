@@ -28,6 +28,34 @@ export async function hashPassword(password: string): Promise<string> {
 export function handleError(error: unknown): ServiceResponse<any> {
   if (error instanceof Error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Handle unique constraint violation
+      if (error.code === 'P2002') {
+        const target = error.meta?.target as string[] | undefined;
+        if (target?.includes('studentId')) {
+          return { success: false, error: "A student with this ID already exists" };
+        }
+        if (target?.includes('email')) {
+          return { success: false, error: "A student with this email already exists" };
+        }
+        return { success: false, error: "This record already exists" };
+      }
+
+      // Handle record not found
+      if (error.code === 'P2025') {
+        return { success: false, error: "Record not found" };
+      }
+
+      // Handle foreign key constraint violation
+      if (error.code === 'P2003') {
+        return { success: false, error: "Related record does not exist" };
+      }
+
+      // Handle invalid input data
+      if (error.code === 'P2000') {
+        return { success: false, error: "The provided value is too long for the field" };
+      }
+
+      // Generic database error
       return { success: false, error: "Database error occurred" };
     }
     return { success: false, error: error.message };

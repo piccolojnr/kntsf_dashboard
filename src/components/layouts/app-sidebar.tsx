@@ -5,7 +5,6 @@ import {
   Settings2,
   Users,
   Shield,
-  Search,
   Newspaper,
   Calendar,
   Mail,
@@ -16,7 +15,6 @@ import {
 import * as React from "react";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
-import { Input } from "../ui/input";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +24,6 @@ import {
   useSidebar,
 } from "../ui/sidebar";
 import { cn } from "../../lib/utils";
-import { useRouter } from "next/navigation";
 import { SessionUser } from "@/lib/types/common";
 import { AccessRoles } from "@/lib/role";
 import Image from "next/image";
@@ -38,20 +35,7 @@ export function AppSidebar({
   user: SessionUser;
   permissions: AccessRoles;
 }) {
-  const { open, openMobile, toggleSidebar } = useSidebar();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = React.useState("");
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      // Navigate to search results page with query parameter
-      router.push(
-        `/dashboard/search?q=${encodeURIComponent(searchQuery.trim())}`
-      );
-      setSearchQuery("");
-    }
-  };
+  const { open, openMobile } = useSidebar();
 
   // This is sample data.
   const navigationData = {
@@ -205,42 +189,6 @@ export function AppSidebar({
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {/* Search Bar */}
-        {/* <form
-          onSubmit={handleSearch}
-          className={cn(
-            "px-4 mb-4 mt-1",
-            "flex items-center justify-between",
-            open ? "w-full" : "w-64"
-          )}
-        >
-          <div className={cn("relative", !open ? "hidden" : "block")}>
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e: {
-                target: { value: React.SetStateAction<string> };
-              }) => setSearchQuery(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-          <div
-            className={cn(
-              "relative",
-              open ? "hidden" : "block",
-              openMobile && "hidden"
-            )}
-          >
-            <button
-              type="submit"
-              className="transition-colors text-muted-foreground hover:text-primary"
-              onClick={toggleSidebar}
-            >
-              <Search className="w-4 h-4" />
-            </button>
-          </div>
-        </form> */}
         <NavMain items={filteredNavItems} />
       </SidebarContent>
       <SidebarFooter>

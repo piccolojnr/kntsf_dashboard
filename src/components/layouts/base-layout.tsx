@@ -20,7 +20,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { SessionUser } from "@/lib/types/common";
 import { AccessRoles } from "@/lib/role";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { Input } from "../ui/input";
 

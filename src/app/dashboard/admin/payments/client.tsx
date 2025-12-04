@@ -18,7 +18,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { MyPagination } from "@/components/common/my-pagination";
 import { VerifyPaymentsDialog } from "@/components/app/payments/verify-payments-dialog";
-import { RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
+import { useDebounce } from "@/lib/hooks/use-debounce";
+import { toast } from "sonner";
 
 const STATUSES = ["SUCCESS", "FAILED", "PENDING", "CANCELLED"];
 const PAGE_SIZE = 10;
@@ -30,13 +32,19 @@ export function PaymentsClient() {
   const [endDate, setEndDate] = useState<string>("");
   const [minAmount, setMinAmount] = useState<string>("");
   const [maxAmount, setMaxAmount] = useState<string>("");
+  // Search state
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   // Dialog state
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
+  // Row verification state
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
+
   const queryClient = useQueryClient();
 
-  // Query
+  // Paginated query with optional search
   const { data, isLoading, error } = useQuery({
     queryKey: [
       "payments-history-paginated",
@@ -48,6 +56,7 @@ export function PaymentsClient() {
         maxAmount,
         currentPage,
         pageSize: PAGE_SIZE,
+        query: debouncedSearchTerm.trim(),
       },
     ],
     queryFn: async () => {
@@ -59,6 +68,7 @@ export function PaymentsClient() {
         maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
         page: currentPage,
         pageSize: PAGE_SIZE,
+        query: debouncedSearchTerm.trim() || undefined,
       });
       if (!response.success)
         throw new Error(response.error || "Failed to load payments");
@@ -66,16 +76,16 @@ export function PaymentsClient() {
     },
   });
 
+  const effectivePayments = data?.data || [];
+
+  const totalPages = data?.total
+    ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
+    : 1;
+
   // Reset to page 1 when filters change
   function handleFilterChange() {
     setCurrentPage(1);
   }
-
-  const paginated = data?.data || [];
-  console.log(paginated, data);
-  const totalPages = data?.total
-    ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
-    : 1;
 
   const handleVerificationSuccess = () => {
     // Refresh the payments list after successful verification
@@ -84,25 +94,67 @@ export function PaymentsClient() {
     });
   };
 
+  const handleVerifySingle = async (payment: any) => {
+    try {
+      setVerifyingId(payment.id);
+
+      const response = await fetch(`/api/payments/verify-bulk`, {
+        method: "POST",
+        body: JSON.stringify({ reference: payment.paymentReference }),
+      });
+      handleVerificationSuccess();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to verify payment. Please try again.";
+      toast.error(message);
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   return (
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <CardTitle>Payments History</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsVerifyDialogOpen(true)}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Verify Payments
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:block">
+                <label className="block text-xs font-medium mb-1">Search</label>
+                <input
+                  type="text"
+                  className="border rounded px-2 py-1 text-sm w-56"
+                  placeholder="Name, Student ID, or Email"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsVerifyDialogOpen(true)}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Verify Payments
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {/* Filter Controls */}
           <div className="flex flex-wrap gap-4 mb-6 items-end">
+            <div className="sm:hidden w-full">
+              <label className="block text-xs font-medium mb-1">Search</label>
+              <input
+                type="text"
+                className="border rounded px-2 py-1 text-sm w-full"
+                placeholder="Name, Student ID, or Email"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
             <div>
               <label className="block text-xs font-medium mb-1">Status</label>
               <select
@@ -181,7 +233,7 @@ export function PaymentsClient() {
           {isLoading ? (
             <div>Loading...</div>
           ) : error ? (
-            <div className="text-red-500">{error.message}</div>
+            <div className="text-red-500">{(error as Error).message}</div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -197,7 +249,7 @@ export function PaymentsClient() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginated.length === 0 ? (
+                    {effectivePayments.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={6}
@@ -207,7 +259,7 @@ export function PaymentsClient() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginated.map((payment: any) => (
+                      effectivePayments.map((payment: any) => (
                         <TableRow key={payment.id}>
                           <TableCell>{payment.paymentReference}</TableCell>
                           <TableCell>
@@ -225,19 +277,39 @@ export function PaymentsClient() {
                             {payment.amount} {payment.currency}
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                payment.status === "SUCCESS"
-                                  ? "default"
-                                  : payment.status === "FAILED"
-                                  ? "destructive"
-                                  : payment.status === "PENDING"
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                            >
-                              {payment.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  payment.status === "SUCCESS"
+                                    ? "default"
+                                    : payment.status === "FAILED"
+                                    ? "destructive"
+                                    : payment.status === "PENDING"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                              >
+                                {payment.status}
+                              </Badge>
+                              {payment.status === "PENDING" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  disabled={verifyingId === payment.id}
+                                  onClick={() => handleVerifySingle(payment)}
+                                >
+                                  {verifyingId === payment.id ? (
+                                    <>
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                      Verifying...
+                                    </>
+                                  ) : (
+                                    "Verify"
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {format(new Date(payment.createdAt), "PPP p")}

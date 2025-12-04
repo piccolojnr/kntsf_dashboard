@@ -46,6 +46,10 @@ export interface PaymentFilters {
     maxAmount?: number;
     page?: number;
     pageSize?: number;
+    /**
+     * Optional free-text search on student name, student ID, or email
+     */
+    query?: string;
 }
 
 export async function getPayments(): Promise<ServiceResponse<PaymentWithRelations[]>> {
@@ -357,12 +361,32 @@ export async function getPaymentsPaginated(filters: PaymentFilters = {}): Promis
             maxAmount,
             page = 1,
             pageSize = 10,
+            query,
         } = filters;
 
         const where: any = {
             student: {
-                deletedAt: null
-            }
+                deletedAt: null,
+                ...(query && {
+                    OR: [
+                        {
+                            name: {
+                                contains: query,
+                            },
+                        },
+                        {
+                            studentId: {
+                                contains: query,
+                            },
+                        },
+                        {
+                            email: {
+                                contains: query,
+                            },
+                        },
+                    ],
+                }),
+            },
         };
         if (status) where.status = status;
         if (startDate) where.createdAt = { ...(where.createdAt || {}), gte: new Date(startDate) };

@@ -98,7 +98,7 @@ export function PaymentsClient() {
     try {
       setVerifyingId(payment.id);
 
-      const response = await fetch(`/api/payments/verify-bulk`, {
+      await fetch(`/api/payments/verify-bulk`, {
         method: "POST",
         body: JSON.stringify({ reference: payment.paymentReference }),
       });

@@ -102,13 +102,13 @@ export async function sendPermitEmails(data: PermitEmailData): Promise<ServiceRe
     })
 
     // Send receipt email
-    const receiptEmail = generateReceiptEmailTemplate({ student, permit, permitCode, qrCode })
-    await sendEmail({
-      to: student.email,
-      subject: `Knutsford University SRC - Payment Receipt (${permitCode})`,
-      template: receiptEmail,
+    // const receiptEmail = generateReceiptEmailTemplate({ student, permit, permitCode, qrCode })
+    // await sendEmail({
+    //   to: student.email,
+    //   subject: `Knutsford University SRC - Payment Receipt (${permitCode})`,
+    //   template: receiptEmail,
 
-    })
+    // })
 
     return { success: true }
   } catch (error) {

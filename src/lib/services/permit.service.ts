@@ -900,6 +900,124 @@ export async function resendPermitEmail(permitId: number, newEmail?: string): Pr
     return handleError(error)
   }
 }
+
+export async function bulkResendPermitEmails(params: {
+  hoursBack?: number
+  startDate?: string
+  endDate?: string
+}): Promise<ServiceResponse<{
+  total: number
+  emailed: number
+  skipped: number
+  errors: Array<{ permitId: number; error: string }>
+}>> {
+  try {
+    const { hoursBack, startDate, endDate } = params
+
+    if (hoursBack && (startDate || endDate)) {
+      return {
+        success: false,
+        error: 'Provide either hoursBack or a date range, not both'
+      }
+    }
+
+    let from: Date
+    let to: Date
+
+    if (hoursBack && hoursBack > 0) {
+      to = new Date()
+      from = new Date(to.getTime() - hoursBack * 60 * 60 * 1000)
+    } else if (startDate || endDate) {
+      from = new Date(startDate || endDate!)
+      from.setHours(0, 0, 0, 0)
+      to = new Date(endDate || startDate!)
+      to.setHours(23, 59, 59, 999)
+    } else {
+      // Default: last 2 hours
+      to = new Date()
+      from = new Date(to.getTime() - 2 * 60 * 60 * 1000)
+    }
+
+    const permits = await prisma.permit.findMany({
+      where: {
+        createdAt: {
+          gte: from,
+          lte: to
+        },
+        status: 'active',
+        student: {
+          email: {
+            not: null
+          }
+        }
+      },
+      include: {
+        student: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    let emailed = 0
+    let skipped = 0
+    const errors: Array<{ permitId: number; error: string }> = []
+
+    for (const permit of permits) {
+      if (!permit.student.email) {
+        skipped++
+        continue
+      }
+
+      try {
+        const verificationUrl = `${BASE_URL}/permits/verify?code=${permit.originalCode}`
+        const qrCode = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(verificationUrl)}&size=200x200`
+
+        const res = await services.email.sendPermitEmails({
+          student: {
+            email: permit.student.email || '',
+            name: permit.student.name || '',
+            studentId: permit.student.studentId || '',
+            course: permit.student.course || '',
+            level: permit.student.level || ''
+          },
+          permit: {
+            id: permit.id.toString(),
+            amountPaid: permit.amountPaid,
+            expiryDate: permit.expiryDate
+          },
+          qrCode,
+          permitCode: permit.originalCode
+        })
+
+        if (res.success) {
+          emailed++
+        } else {
+          errors.push({
+            permitId: permit.id,
+            error: res.error || 'Failed to send email'
+          })
+        }
+      } catch (error: any) {
+        errors.push({
+          permitId: permit.id,
+          error: error?.message || 'Unknown error'
+        })
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        total: permits.length,
+        emailed,
+        skipped,
+        errors
+      }
+    }
+  } catch (error: any) {
+    log.error('Error bulk resending permit emails:', error)
+    return handleError(error)
+  }
+}
 function generatePermitCode(): string {
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 4);
   return nanoid();

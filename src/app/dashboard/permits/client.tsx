@@ -61,6 +61,12 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
   const [resendPermitId, setResendPermitId] = useState<number | null>(null);
   const [resendEmail, setResendEmail] = useState<string>("");
   const [resendPhone, setResendPhone] = useState<string>("");
+  const [isBulkResendOpen, setIsBulkResendOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<"hours" | "range">("hours");
+  const [bulkHours, setBulkHours] = useState<string>("2");
+  const [bulkStartDate, setBulkStartDate] = useState<string>("");
+  const [bulkEndDate, setBulkEndDate] = useState<string>("");
+  const [isBulkSending, setIsBulkSending] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
@@ -387,6 +393,171 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
               </DialogContent>
             </Dialog>
           )}
+          {false && (
+            <Dialog open={isBulkResendOpen} onOpenChange={setIsBulkResendOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Bulk Resend
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Resend Permit Emails</DialogTitle>
+                  <DialogDescription>
+                    Resend permit emails for permits created within a time
+                    window. Only active permits with an email will be included.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Mode</p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={bulkMode === "hours" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setBulkMode("hours")}
+                        disabled={isBulkSending}
+                      >
+                        Last N hours
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={bulkMode === "range" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setBulkMode("range")}
+                        disabled={isBulkSending}
+                      >
+                        Date range
+                      </Button>
+                    </div>
+                  </div>
+                  {bulkMode === "hours" && (
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium">
+                        Hours back
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={168}
+                        value={bulkHours}
+                        onChange={(e) => setBulkHours(e.target.value)}
+                        disabled={isBulkSending}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Example: 2 = resend for permits created in the last 2
+                        hours.
+                      </p>
+                    </div>
+                  )}
+                  {bulkMode === "range" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-medium">
+                          Start date
+                        </label>
+                        <Input
+                          type="date"
+                          value={bulkStartDate}
+                          onChange={(e) => setBulkStartDate(e.target.value)}
+                          disabled={isBulkSending}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs font-medium">
+                          End date
+                        </label>
+                        <Input
+                          type="date"
+                          value={bulkEndDate}
+                          onChange={(e) => setBulkEndDate(e.target.value)}
+                          disabled={isBulkSending}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    disabled={isBulkSending}
+                    onClick={() => setIsBulkResendOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    type="button"
+                    disabled={isBulkSending}
+                    onClick={async () => {
+                      try {
+                        setIsBulkSending(true);
+
+                        if (bulkMode === "hours") {
+                          const hours = parseInt(bulkHours || "0", 10);
+                          if (!hours || hours <= 0) {
+                            toast.error("Please provide a valid hours value");
+                            setIsBulkSending(false);
+                            return;
+                          }
+                          const res =
+                            await services.permit.bulkResendPermitEmails({
+                              hoursBack: hours,
+                            });
+                          if (!res.success || !res.data) {
+                            toast.error(
+                              res.error || "Failed to bulk resend emails"
+                            );
+                          } else {
+                            toast.success(
+                              `Bulk resend complete. Total: ${res.data.total}, sent: ${res.data.emailed}, skipped: ${res.data.skipped}`
+                            );
+                          }
+                        } else {
+                          if (!bulkStartDate || !bulkEndDate) {
+                            toast.error(
+                              "Please select both start and end date"
+                            );
+                            setIsBulkSending(false);
+                            return;
+                          }
+                          const res =
+                            await services.permit.bulkResendPermitEmails({
+                              startDate: bulkStartDate,
+                              endDate: bulkEndDate,
+                            });
+                          if (!res.success || !res.data) {
+                            toast.error(
+                              res.error || "Failed to bulk resend emails"
+                            );
+                          } else {
+                            toast.success(
+                              `Bulk resend complete. Total: ${res.data.total}, sent: ${res.data.emailed}, skipped: ${res.data.skipped}`
+                            );
+                          }
+                        }
+
+                        setIsBulkResendOpen(false);
+                      } catch (e) {
+                        console.error(e);
+                        toast.error(
+                          "An error occurred while bulk resending emails"
+                        );
+                      } finally {
+                        setIsBulkSending(false);
+                      }
+                    }}
+                  >
+                    {isBulkSending ? "Sending..." : "Resend emails"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
       {isLoading ? (
@@ -491,8 +662,8 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                             status === "active"
                               ? "bg-green-100 text-green-800"
                               : status === "revoked"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
                           }`}
                         >
                           {status.charAt(0).toUpperCase() + status.slice(1)}

@@ -204,140 +204,62 @@ export class PaymentVerificationService {
         const { startDate, endDate, reference } = filters
         const gateway = getPaymentGateway()
         const errors: Array<{ paymentId: number; error: string }> = []
-        let successful = 0
-        let failed = 0
-        let skipped = 0
+        const bulkVerifiedAt = new Date().toISOString()
 
         try {
             // Build where clause
             const where: any = {
-                gatewayRef: { not: null }, // Only process payments with gatewayRef (token)
+                gatewayRef: { not: null }, // Only process payments with gatewayRef
+                status: { in: ['PENDING'] }, // Only PENDING or FAILED payments
                 student: {
                     deletedAt: null
                 }
             }
 
-            // If single reference provided, find by paymentReference or gatewayRef
+
+
+            // Handle reference filter
             if (reference) {
-                const payment = await prisma.payment.findFirst({
-                    where: {
-                        OR: [
-                            { paymentReference: reference },
-                            { gatewayRef: reference }
-                        ]
-                    },
-                    include: { student: true }
-                })
-
-                if (!payment) {
-                    throw new Error(`Payment not found for reference: ${reference}`)
-                }
-
-                // Process single payment
-                if (!payment.gatewayRef) {
-                    skipped++
-                    return { total: 1, successful: 0, failed: 0, skipped: 1, errors: [] }
-                }
-
-                try {
-                    const verificationResult = await gateway.verifyTransaction(payment.gatewayRef)
-
-                    // Update payment status
-                    await prisma.payment.update({
-                        where: { id: payment.id },
-                        data: {
-                            status: verificationResult.status,
-                            metadata: {
-                                ...payment.metadata as Record<string, any>,
-                                verificationResponse: verificationResult.gatewayResponse,
-                                bulkVerifiedAt: new Date().toISOString()
-                            },
-                        },
-                    })
-
-                    // Create permit if successful and permit doesn't exist
-                    if (verificationResult.status === 'SUCCESS' && !payment.permitId) {
-                        await services.permit.create({
-                            studentId: payment.student.studentId + "",
-                            paymentId: payment.id,
-                        })
-                        successful++
-                    } else if (verificationResult.status === 'SUCCESS' && payment.permitId) {
-                        successful++
-                    } else if (verificationResult.status === 'FAILED') {
-                        failed++
-                    } else {
-                        // PENDING or other status
-                        successful++
-                    }
-                } catch (error) {
-                    failed++
-                    // Mark payment as failed if verification fails
-                    await prisma.payment.update({
-                        where: { id: payment.id },
-                        data: {
-                            status: 'FAILED',
-                            metadata: {
-                                ...payment.metadata as Record<string, any>,
-                                verificationError: error instanceof Error ? error.message : 'Unknown error',
-                                bulkVerifiedAt: new Date().toISOString()
-                            },
-                        },
-                    })
-                    errors.push({
-                        paymentId: payment.id,
-                        error: error instanceof Error ? error.message : 'Unknown error'
-                    })
-                }
-
-                return {
-                    total: 1,
-                    successful,
-                    failed,
-                    skipped,
-                    errors
-                }
-            }
-
-            // Date range filtering
-            if (startDate || endDate) {
-                if (startDate) {
-                    where.createdAt = { ...where.createdAt, gte: new Date(startDate) }
-                }
-                if (endDate) {
-                    // Set end date to end of day
-                    const endDateTime = new Date(endDate)
-                    endDateTime.setHours(23, 59, 59, 999)
-                    where.createdAt = { ...where.createdAt, lte: endDateTime }
-                }
+                where.OR = [
+                    { paymentReference: reference },
+                    { gatewayRef: reference }
+                ]
             } else {
-                // Default to today if no dates provided
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-                const endOfToday = new Date()
-                endOfToday.setHours(23, 59, 59, 999)
-                where.createdAt = {
-                    gte: today,
-                    lte: endOfToday
-                }
+                // Date range filtering
+                const dateRange = this.buildDateRange(startDate, endDate)
+                where.createdAt = dateRange
             }
 
-            // Fetch all payments matching criteria
+            // Fetch payments matching criteria (without student for efficiency)
             const payments = await prisma.payment.findMany({
                 where,
-                include: { student: true },
-                orderBy: { createdAt: 'desc' }
-            })
+                select: {
+                    id: true,
+                    gatewayRef: true,
+                    permitId: true,
+                    amount: true,
+                    metadata: true,
+                    student: {
+                        select: {
+                            studentId: true
+                        }
+                    }
+                }
+            }) as Array<{
+                id: number
+                gatewayRef: string
+                permitId: number | null
+                amount: number
+                metadata: any
+                student: { studentId: string }
+            }>
 
             const total = payments.length
+            let successful = 0
+            let failed = 0
 
             // Process payments sequentially
             for (const payment of payments) {
-                if (!payment.gatewayRef) {
-                    skipped++
-                    continue
-                }
-
                 try {
                     // Verify transaction using gateway
                     const verificationResult = await gateway.verifyTransaction(payment.gatewayRef)
@@ -350,7 +272,7 @@ export class PaymentVerificationService {
                             metadata: {
                                 ...payment.metadata as Record<string, any>,
                                 verificationResponse: verificationResult.gatewayResponse,
-                                bulkVerifiedAt: new Date().toISOString()
+                                bulkVerifiedAt
                             },
                         },
                     })
@@ -361,17 +283,25 @@ export class PaymentVerificationService {
                             studentId: payment.student.studentId + "",
                             paymentId: payment.id,
                         })
-                        successful++
-                    } else if (verificationResult.status === 'SUCCESS' && payment.permitId) {
+                    }
+
+                    // Count based on actual verification result status
+                    if (verificationResult.status === 'SUCCESS') {
                         successful++
                     } else if (verificationResult.status === 'FAILED') {
                         failed++
+                        errors.push({
+                            paymentId: payment.id,
+                            error: verificationResult.message || 'Transaction failed'
+                        })
                     } else {
-                        // PENDING or other status - count as processed
+                        // PENDING or other status
                         successful++
                     }
                 } catch (error) {
                     failed++
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
                     // Mark payment as failed if verification fails
                     await prisma.payment.update({
                         where: { id: payment.id },
@@ -379,14 +309,15 @@ export class PaymentVerificationService {
                             status: 'FAILED',
                             metadata: {
                                 ...payment.metadata as Record<string, any>,
-                                verificationError: error instanceof Error ? error.message : 'Unknown error',
-                                bulkVerifiedAt: new Date().toISOString()
+                                verificationError: errorMessage,
+                                bulkVerifiedAt
                             },
                         },
                     })
+
                     errors.push({
                         paymentId: payment.id,
-                        error: error instanceof Error ? error.message : 'Unknown error'
+                        error: errorMessage
                     })
                 }
             }
@@ -395,12 +326,26 @@ export class PaymentVerificationService {
                 total,
                 successful,
                 failed,
-                skipped,
+                skipped: 0,
                 errors
             }
         } catch (error) {
             console.error('Bulk payment verification error:', error)
             throw error
+        }
+    }
+
+    private static buildDateRange(startDate?: string, endDate?: string): { gte?: Date; lte?: Date } {
+        // Default to today if no dates provided
+        const start = startDate ? new Date(startDate) : new Date()
+        start.setHours(0, 0, 0, 0)
+
+        const end = endDate ? new Date(endDate) : new Date()
+        end.setHours(23, 59, 59, 999)
+
+        return {
+            gte: start,
+            lte: end
         }
     }
 } 

@@ -18,7 +18,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { MyPagination } from "@/components/common/my-pagination";
 import { VerifyPaymentsDialog } from "@/components/app/payments/verify-payments-dialog";
-import { Loader2, RefreshCw } from "lucide-react";
+import { PaymentDetailsDialog } from "@/components/app/payments/payment-details-dialog";
+import { Loader2, RefreshCw, Eye } from "lucide-react";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { toast } from "sonner";
 
@@ -41,6 +42,9 @@ export function PaymentsClient() {
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   // Row verification state
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
+  // Payment details dialog
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -112,6 +116,11 @@ export function PaymentsClient() {
     } finally {
       setVerifyingId(null);
     }
+  };
+
+  const handleViewDetails = (payment: any) => {
+    setSelectedPayment(payment);
+    setIsDetailsDialogOpen(true);
   };
 
   return (
@@ -246,6 +255,7 @@ export function PaymentsClient() {
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Permit</TableHead>
+                      <TableHead className="w-10">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -328,6 +338,17 @@ export function PaymentsClient() {
                               </span>
                             )}
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleViewDetails(payment)}
+                              title="View payment details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -350,6 +371,12 @@ export function PaymentsClient() {
         open={isVerifyDialogOpen}
         onOpenChange={setIsVerifyDialogOpen}
         onSuccess={handleVerificationSuccess}
+      />
+
+      <PaymentDetailsDialog
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        payment={selectedPayment}
       />
     </>
   );

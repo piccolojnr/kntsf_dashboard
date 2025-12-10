@@ -412,6 +412,7 @@ export async function getPaymentsPaginated(filters: PaymentFilters = {}): Promis
                         select: {
                             id: true,
                             permitCode: true,
+                            originalCode: true,
                             status: true,
                             createdAt: true
                         }
@@ -437,6 +438,7 @@ export async function getPaymentsPaginated(filters: PaymentFilters = {}): Promis
                     permit: payment.permit ? {
                         id: payment.permit.id,
                         permitCode: payment.permit.permitCode,
+                        originalCode: payment.permit.originalCode,
                         status: payment.permit.status,
                         createdAt: payment.permit.createdAt
                     } : null

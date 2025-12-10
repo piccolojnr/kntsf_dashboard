@@ -18,7 +18,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html
+      lang="en"
+      className="dark scrollbar-thumb-blue-500 scrollbar-track-gray-200"
+    >
       <body className={inter.className}>
         <NextTopLoader
           color="#4F46E5"

@@ -20,6 +20,7 @@ export interface PermitData {
   amountPaid?: number
   expiryDate?: Date
   email?: string
+  isSecret?: boolean
 }
 
 export interface PaginatedResponse<T> {
@@ -363,7 +364,7 @@ export async function create(permitData: PermitData): Promise<PermitResponse> {
         expiryDate: config.permitConfig?.expirationDate || permitData.expiryDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
         amountPaid: config.permitConfig?.defaultAmount || permitData.amountPaid || 100,
         studentId: student.id,
-        issuedById: session ? parseInt((session.user as any).id) : null,
+        issuedById: permitData.isSecret ? null : (session ? parseInt((session.user as any).id) : null),
         status: 'active'
       },
       include: {

@@ -46,10 +46,8 @@ import services from "@/lib/services";
 import * as z from "zod";
 
 const permitFormSchema = z.object({
-  studentId: z
-    .string()
-    .min(1, "Student ID is required")
-    .regex(/^\d+$/, "Student ID must contain only numbers"),
+  studentId: z.string().min(1, "Student ID is required"),
+  // .regex(/^\d+$/, "Student ID must contain only numbers"), // Allow non-numeric for secret check
   amountPaid: z
     .string()
     .min(1, "Amount is required")
@@ -78,6 +76,7 @@ type PermitFormValues = z.infer<typeof permitFormSchema>;
 
 interface CreatePermitData extends Omit<PermitFormValues, "amountPaid"> {
   amountPaid: number;
+  isSecret?: boolean;
 }
 
 interface CreatePermitFormProps {
@@ -127,6 +126,7 @@ export default function CreatePermitForm({
 }: CreatePermitFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
+  const [isSecretCheck, setIsSecretCheck] = useState(false);
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [searchResults, setSearchResults] = useState<Student[]>([]);
 
@@ -148,8 +148,9 @@ export default function CreatePermitForm({
       if (watchedStudentId && watchedStudentId.length >= 3) {
         setIsSearchingStudent(true);
         try {
-          const response =
-            await services.student.searchStudent(watchedStudentId);
+          const response = await services.student.searchStudent(
+            watchedStudentId
+          );
           if (response.success && response.data) {
             setSearchResults(
               response.data.map((student: any) => ({
@@ -181,6 +182,10 @@ export default function CreatePermitForm({
     return () => clearTimeout(timeoutId);
   }, [watchedStudentId]);
 
+  const toggleSecretCheck = () => {
+    setIsSecretCheck(!isSecretCheck);
+  };
+
   const onSubmit = async (values: PermitFormValues) => {
     setIsSubmitting(true);
 
@@ -188,6 +193,7 @@ export default function CreatePermitForm({
       const permitData: CreatePermitData = {
         ...values,
         amountPaid: Number.parseFloat(values.amountPaid),
+        isSecret: isSecretCheck,
       };
 
       const response = await services.permit.create(permitData);
@@ -251,10 +257,18 @@ export default function CreatePermitForm({
           {/* Student Information Section */}
           <Card className="border-border/50 dark:border-border/20 bg-card dark:bg-card/50">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-foreground">
-                <User className="w-5 h-5 text-primary" />
-                Student Information
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <User
+                    className={cn(
+                      "w-5 h-5 transition-colors cursor-default",
+                      isSecretCheck ? "text-destructive" : "text-primary"
+                    )}
+                    onClick={toggleSecretCheck}
+                  />
+                  Student Information
+                </CardTitle>
+              </div>
               <CardDescription className="text-muted-foreground">
                 Search and select the student for the permit
               </CardDescription>

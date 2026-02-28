@@ -13,6 +13,7 @@ import CreatePermitForm from "@/components/app/permit/create-permit-form";
 import { StudentForm } from "@/components/app/students/student-form";
 import { StudentTable } from "@/components/app/students/student-table";
 import { StudentToolbar } from "@/components/app/students/student-toolbar";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { MyPagination } from "@/components/common/my-pagination";
 import services from "@/lib/services";
@@ -35,12 +36,15 @@ interface StudentsClientProps {
   permissions: AccessRoles;
 }
 
-export function StudentsClient({ permissions }: StudentsClientProps) {
+export function StudentsClient({ user, permissions }: StudentsClientProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPermitDialogOpen, setIsPermitDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedStudentForPermit, setSelectedStudentForPermit] =
     useState<any>(null);
+  const [isRecordSouvenirDialogOpen, setIsRecordSouvenirDialogOpen] = useState(false);
+  const [selectedStudentForSouvenir, setSelectedStudentForSouvenir] = useState<any>(null);
+  const [selectedSouvenirId, setSelectedSouvenirId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -58,6 +62,15 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         throw new Error(response.error || "Failed to load configuration");
       }
       return response.data;
+    },
+  });
+
+  const { data: activeSouvenirs } = useQuery({
+    queryKey: ["activeSouvenirs"],
+    queryFn: async () => {
+      const resp = await services.souvenir.getAllSouvenirs();
+      if (!resp.success) throw new Error(resp.error || "Failed to load souvenirs");
+      return resp.data?.filter((s: any) => s.isActive) || [];
     },
   });
 
@@ -124,7 +137,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         } else {
           toast.error(
             response.error ||
-              `Failed to ${selectedStudent ? "update" : "create"} student`
+            `Failed to ${selectedStudent ? "update" : "create"} student`
           );
         }
       } catch (error) {
@@ -138,6 +151,32 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
     },
     [selectedStudent, permissions.isExecutive, queryClient]
   );
+
+  const handleRecordSouvenirSubmit = async () => {
+    if (!selectedStudentForSouvenir || !selectedSouvenirId) {
+      toast.error("Please select a souvenir.");
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      const resp = await services.souvenir.recordStudentSouvenir(
+        selectedStudentForSouvenir.id,
+        parseInt(selectedSouvenirId),
+        Number(user.id)
+      );
+      if (resp.success) {
+        toast.success("Souvenir recorded successfully!");
+        setIsRecordSouvenirDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["students"] });
+      } else {
+        toast.error(resp.error || "Failed to record souvenir");
+      }
+    } catch (err: any) {
+      toast.error("An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleDelete = useCallback(
     async (studentId: string) => {
@@ -234,6 +273,21 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
     setIsPermitDialogOpen(true);
   }, []);
 
+  const handleRecordSouvenir = useCallback((student: any) => {
+    // Check if there are indeed active souvenirs
+    if (!activeSouvenirs || activeSouvenirs.length === 0) {
+      toast.error("There are no active souvenir rounds.");
+      return;
+    }
+    setSelectedStudentForSouvenir(student);
+    if (activeSouvenirs.length === 1) {
+      setSelectedSouvenirId(activeSouvenirs[0].id.toString());
+    } else {
+      setSelectedSouvenirId("");
+    }
+    setIsRecordSouvenirDialogOpen(true);
+  }, [activeSouvenirs]);
+
   const handleDialogClose = useCallback((open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
@@ -320,6 +374,7 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onCreatePermit={handleCreatePermit}
+        onRecordSouvenir={handleRecordSouvenir}
       />
 
       <MyPagination
@@ -371,6 +426,37 @@ export function StudentsClient({ permissions }: StudentsClientProps) {
               setIsDialogOpen={setIsPermitDialogOpen}
               studentId={selectedStudentForPermit?.studentId || ""}
             />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {permissions.isExecutive && (
+        <Dialog open={isRecordSouvenirDialogOpen} onOpenChange={setIsRecordSouvenirDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Record Souvenir</DialogTitle>
+              <DialogDescription>
+                Record that {selectedStudentForSouvenir?.name} has received a souvenir.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Select Souvenir Round</Label>
+                <Select value={selectedSouvenirId} onValueChange={setSelectedSouvenirId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select souvenir round..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeSouvenirs?.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleRecordSouvenirSubmit} disabled={isSubmitting || !selectedSouvenirId} className="w-full">
+                {isSubmitting ? "Recording..." : "Record Souvenir"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       )}

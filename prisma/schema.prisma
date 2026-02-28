@@ -8,22 +8,22 @@ datasource db {
 }
 
 model User {
-  id                  Int             @id @default(autoincrement())
-  username            String          @unique
-  email               String          @unique
+  id                  Int               @id @default(autoincrement())
+  username            String            @unique
+  email               String            @unique
   password            String
   roleId              Int
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  biography           String?         @db.Text
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  biography           String?           @db.Text
   category            String?
   position            String?
-  positionDescription String?         @db.Text
+  positionDescription String?           @db.Text
   socialLinks         Json?
-  name                String          @default("")
+  name                String            @default("")
   image               String?
-  index               Int             @default(0)
-  published           Boolean         @default(true)
+  index               Int               @default(0)
+  published           Boolean           @default(true)
   auditLogs           AuditLog[]
   Document            Document[]
   Event               Event[]
@@ -32,7 +32,8 @@ model User {
   permits             Permit[]
   recoveryTokens      RecoveryToken[]
   StudentIdea         StudentIdea[]
-  role                Role            @relation(fields: [roleId], references: [id])
+  role                Role              @relation(fields: [roleId], references: [id])
+  studentSouvenirs    StudentSouvenir[]
 
   @@index([roleId], map: "User_roleId_fkey")
 }
@@ -47,22 +48,23 @@ model Role {
 }
 
 model Student {
-  id          Int           @id @default(autoincrement())
-  studentId   String        @unique
-  name        String?
-  email       String?
-  course      String?
-  level       String?
-  number      String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  deletedAt   DateTime?
-  GameUser    GameUser?
-  payments    Payment[]
-  permits     Permit[]
-  pollOptions PollOption[]
-  pollVotes   PollVote[]
-  StudentIdea StudentIdea[]
+  id               Int               @id @default(autoincrement())
+  studentId        String            @unique
+  name             String?
+  email            String?
+  course           String?
+  level            String?
+  number           String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  GameUser         GameUser?
+  payments         Payment[]
+  permits          Permit[]
+  pollOptions      PollOption[]
+  pollVotes        PollVote[]
+  StudentIdea      StudentIdea[]
+  studentSouvenirs StudentSouvenir[]
 
   @@index([studentId])
   @@index([email])
@@ -436,4 +438,32 @@ enum PollType {
 enum OptionStatus {
   ACTIVE
   MERGED
+}
+
+model Souvenir {
+  id          Int               @id @default(autoincrement())
+  name        String            @unique
+  description String?           @db.Text
+  isActive    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  students    StudentSouvenir[]
+
+  @@index([isActive])
+}
+
+model StudentSouvenir {
+  id           Int      @id @default(autoincrement())
+  studentId    Int
+  souvenirId   Int
+  receivedAt   DateTime @default(now())
+  recordedById Int
+  recordedBy   User     @relation(fields: [recordedById], references: [id])
+  souvenir     Souvenir @relation(fields: [souvenirId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, souvenirId])
+  @@index([studentId])
+  @@index([souvenirId])
+  @@index([recordedById], map: "StudentSouvenir_recordedById_fkey")
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { MenuIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { MenuIcon, Pencil, Plus, Trash2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -31,6 +31,7 @@ interface StudentTableProps {
   onEdit: (student: Student) => void;
   onDelete: (studentId: string) => void;
   onCreatePermit: (student: Student) => void;
+  onRecordSouvenir?: (student: Student) => void;
 }
 
 export function StudentTable({
@@ -40,6 +41,7 @@ export function StudentTable({
   onEdit,
   onDelete,
   onCreatePermit,
+  onRecordSouvenir,
 }: StudentTableProps) {
   if (isLoading) {
     return (
@@ -59,7 +61,7 @@ export function StudentTable({
                   <TableHead>Course</TableHead>
                   <TableHead>Level</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>Created At</TableHead>
+                  <TableHead>Souvenirs Received</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -85,7 +87,7 @@ export function StudentTable({
                       <Skeleton className="w-24 h-4" />
                     </TableCell>
                     <TableCell>
-                      <Skeleton className="w-24 h-4" />
+                      <Skeleton className="w-16 h-4" />
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
@@ -114,7 +116,7 @@ export function StudentTable({
               <TableHead>Course</TableHead>
               <TableHead>Level</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Created At</TableHead>
+              <TableHead>Souvenirs Received</TableHead>
               {isExecutive && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
@@ -135,7 +137,17 @@ export function StudentTable({
                 <TableCell>{student.level}</TableCell>
                 <TableCell>{student.number}</TableCell>
                 <TableCell>
-                  {format(new Date(student.createdAt), "MMM d, yyyy")}
+                  {(student as any).studentSouvenirs && (student as any).studentSouvenirs.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {(student as any).studentSouvenirs.map((ss: any) => (
+                        <span key={ss.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
+                          {ss.souvenir.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 italic text-sm">None</span>
+                  )}
                 </TableCell>
                 {isExecutive && (
                   <TableCell>
@@ -161,6 +173,11 @@ export function StudentTable({
                               Delete
                             </DropdownMenuItem>
                           </>
+                        )}
+                        {isExecutive && onRecordSouvenir && (
+                          <DropdownMenuItem onClick={() => onRecordSouvenir(student)}>
+                            <Gift className="w-4 h-4 mr-2" /> Record Souvenir
+                          </DropdownMenuItem>
                         )}
                         {isExecutive && (
                           <DropdownMenuItem>

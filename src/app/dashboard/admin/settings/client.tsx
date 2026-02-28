@@ -13,14 +13,15 @@ import { PermitSettings } from "@/components/app/settings/sections/permit-settin
 import { AccessRoles } from "@/lib/role";
 import { SessionUser } from "@/lib/types/common";
 import { AppInfoSettings } from "@/components/app/settings/sections/app-info-settings";
-import { Settings, Contact, Calendar, FileText, Info } from "lucide-react";
+import { SouvenirSettings } from "@/components/app/settings/sections/souvenir-settings";
+import { Settings, Contact, Calendar, FileText, Info, Gift } from "lucide-react";
 
 interface SettingsClientProps {
   user: SessionUser;
   permissions: AccessRoles;
 }
 
-export function SettingsClient({}: SettingsClientProps) {
+export function SettingsClient({ }: SettingsClientProps) {
   const [activeTab, setActiveTab] = useState("contact");
   const queryClient = useQueryClient();
 
@@ -92,16 +93,16 @@ export function SettingsClient({}: SettingsClientProps) {
         className="space-y-6"
       >
         <div className="">
-          <TabsList className="grid w-full grid-cols-4 h-auto p-1  ">
-            <TabsTrigger 
-              value="contact" 
+          <TabsList className="grid w-full grid-cols-5 h-auto p-1  ">
+            <TabsTrigger
+              value="contact"
               className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400"
             >
               <Contact className="w-4 h-4" />
               <span className="hidden sm:inline">Contact Info</span>
               <span className="sm:hidden">Contact</span>
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="semester"
               className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400"
             >
@@ -109,7 +110,7 @@ export function SettingsClient({}: SettingsClientProps) {
               <span className="hidden sm:inline">Semester</span>
               <span className="sm:hidden">Semester</span>
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="permit"
               className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400"
             >
@@ -117,13 +118,21 @@ export function SettingsClient({}: SettingsClientProps) {
               <span className="hidden sm:inline">Permit Settings</span>
               <span className="sm:hidden">Permit</span>
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="appinfo"
               className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400"
             >
               <Info className="w-4 h-4" />
               <span className="hidden sm:inline">App Info & Logins</span>
               <span className="sm:hidden">App Info</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="souvenir"
+              className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400"
+            >
+              <Gift className="w-4 h-4" />
+              <span className="hidden sm:inline">Souvenirs</span>
+              <span className="sm:hidden">Souvenirs</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -202,6 +211,23 @@ export function SettingsClient({}: SettingsClientProps) {
             </CardHeader>
             <CardContent className="pt-0">
               <AppInfoSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="souvenir" className="space-y-6">
+          <Card className="border-0 shadow-lg ">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-2xl text-gray-900 dark:text-gray-100">
+                <Gift className="w-6 h-6 text-pink-600 dark:text-pink-400" />
+                Souvenir Management
+              </CardTitle>
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage souvenir rounds and activate them for distribution
+              </p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <SouvenirSettings />
             </CardContent>
           </Card>
         </TabsContent>

@@ -61,7 +61,12 @@ export async function getAll(params: {
         where,
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        include: {
+          studentSouvenirs: {
+            include: { souvenir: true }
+          }
+        }
       })
     ])
 

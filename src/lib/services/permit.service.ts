@@ -1019,6 +1019,24 @@ export async function bulkResendPermitEmails(params: {
     return handleError(error)
   }
 }
+
+export async function setCardDelivered(
+  permitId: number,
+  delivered: boolean
+): Promise<ServiceResponse<{ id: number; cardDelivered: boolean }>> {
+  try {
+    const permit = await prisma.permit.update({
+      where: { id: permitId },
+      data: { cardDelivered: delivered },
+      select: { id: true, cardDelivered: true }
+    })
+    return { success: true, data: permit }
+  } catch (error: any) {
+    log.error('Error updating card delivered status:', error)
+    return handleError(error)
+  }
+}
+
 function generatePermitCode(): string {
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 4);
   return nanoid();

@@ -40,6 +40,7 @@ import { SessionUser } from "@/lib/types/common";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface PermitsClientProps {
   user: SessionUser;
@@ -578,6 +579,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                     <TableHead>Expiry Date</TableHead>
                     <TableHead>Amount Paid</TableHead>
                     <TableHead>Issued By</TableHead>
+                    <TableHead>Card</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -606,6 +608,9 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                         <Skeleton className="w-24 h-4" />
                       </TableCell>
                       <TableCell>
+                        <Skeleton className="w-4 h-4" />
+                      </TableCell>
+                      <TableCell>
                         <div className="flex space-x-2">
                           <Skeleton className="w-16 h-9" />
                           <Skeleton className="h-9 w-9" />
@@ -631,6 +636,7 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                   <TableHead>Expiry Date</TableHead>
                   <TableHead>Amount Paid</TableHead>
                   <TableHead>Issued By</TableHead>
+                  <TableHead>Card</TableHead>
                   {permissions.isExecutive && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -678,6 +684,27 @@ export function PermitsClient({ permissions }: PermitsClientProps) {
                       <TableCell>GHS {permit.amountPaid.toFixed(2)}</TableCell>
                       <TableCell>
                         {permit.issuedBy?.username || "Unknown"}
+                      </TableCell>
+                      <TableCell>
+                        <Checkbox
+                          checked={permit.cardDelivered}
+                          disabled={!permissions.isExecutive}
+                          onCheckedChange={async (checked) => {
+                            try {
+                              const res = await services.permit.setCardDelivered(
+                                permit.id,
+                                checked === true
+                              );
+                              if (res.success) {
+                                queryClient.invalidateQueries({ queryKey: ["permits"] });
+                              } else {
+                                toast.error(res.error || "Failed to update card status");
+                              }
+                            } catch {
+                              toast.error("Failed to update card status");
+                            }
+                          }}
+                        />
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">

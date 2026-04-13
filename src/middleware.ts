@@ -1,7 +1,13 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getConfiguredElectionAppUrl, getConfiguredElectionSubdomain, getMainDomainUrl } from "@/lib/election-url";
+import {
+    getConfiguredElectionAppUrl,
+    getConfiguredElectionSubdomain,
+    getInternalElectionPathFromPublicPath,
+    getMainDomainUrl,
+    getPublicElectionPath,
+} from "@/lib/election-url";
 
 function isIpv4Host(hostname: string) {
     return /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
@@ -40,12 +46,27 @@ export async function middleware(req: NextRequest) {
             const configuredElectionUrl = new URL(electionAppUrl);
             const electionHost = port ? `${configuredElectionUrl.hostname}:${port}` : configuredElectionUrl.hostname;
             const isElectionHost = hostname === configuredElectionUrl.hostname;
+            const internalElectionPath = getInternalElectionPathFromPublicPath(pathname);
 
             if (!isElectionHost && isElectionPath) {
-                return NextResponse.redirect(withHost(req.nextUrl, electionHost));
+                const redirectUrl = withHost(req.nextUrl, electionHost);
+                redirectUrl.pathname = getPublicElectionPath(pathname);
+                return NextResponse.redirect(redirectUrl);
             }
 
-            if (isElectionHost && !isElectionPath) {
+            if (isElectionHost && isElectionPath) {
+                const redirectUrl = req.nextUrl.clone();
+                redirectUrl.pathname = getPublicElectionPath(pathname);
+                return NextResponse.redirect(redirectUrl);
+            }
+
+            if (isElectionHost && internalElectionPath) {
+                const rewriteUrl = req.nextUrl.clone();
+                rewriteUrl.pathname = internalElectionPath;
+                return NextResponse.rewrite(rewriteUrl);
+            }
+
+            if (isElectionHost && !internalElectionPath) {
                 return NextResponse.redirect(new URL(getMainDomainUrl(pathname), req.url));
             }
         } catch {
@@ -57,12 +78,27 @@ export async function middleware(req: NextRequest) {
         const mainHost = port ? `${mainHostname}:${port}` : mainHostname;
         const electionHost = port ? `${electionHostname}:${port}` : electionHostname;
         const isElectionHost = hostname === electionHostname;
+        const internalElectionPath = getInternalElectionPathFromPublicPath(pathname);
 
         if (!isElectionHost && isElectionPath) {
-            return NextResponse.redirect(withHost(req.nextUrl, electionHost));
+            const redirectUrl = withHost(req.nextUrl, electionHost);
+            redirectUrl.pathname = getPublicElectionPath(pathname);
+            return NextResponse.redirect(redirectUrl);
         }
 
-        if (isElectionHost && !isElectionPath) {
+        if (isElectionHost && isElectionPath) {
+            const redirectUrl = req.nextUrl.clone();
+            redirectUrl.pathname = getPublicElectionPath(pathname);
+            return NextResponse.redirect(redirectUrl);
+        }
+
+        if (isElectionHost && internalElectionPath) {
+            const rewriteUrl = req.nextUrl.clone();
+            rewriteUrl.pathname = internalElectionPath;
+            return NextResponse.rewrite(rewriteUrl);
+        }
+
+        if (isElectionHost && !internalElectionPath) {
             return NextResponse.redirect(withHost(req.nextUrl, mainHost));
         }
     }

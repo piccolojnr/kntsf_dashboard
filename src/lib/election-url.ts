@@ -34,12 +34,61 @@ export function getElectionPath(path = "/elections") {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
+export function getPublicElectionPath(path = "/elections") {
+  const normalizedPath = getElectionPath(path);
+
+  if (normalizedPath === "/elections") {
+    return "/";
+  }
+
+  if (normalizedPath === "/elections/results") {
+    return "/results";
+  }
+
+  const electionDetailMatch = normalizedPath.match(/^\/elections\/(\d+)$/);
+  if (electionDetailMatch) {
+    return `/${electionDetailMatch[1]}`;
+  }
+
+  const electionResultsMatch = normalizedPath.match(/^\/elections\/(\d+)\/results$/);
+  if (electionResultsMatch) {
+    return `/${electionResultsMatch[1]}/results`;
+  }
+
+  return normalizedPath;
+}
+
+export function getInternalElectionPathFromPublicPath(path = "/") {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (normalizedPath === "/") {
+    return "/elections";
+  }
+
+  if (normalizedPath === "/results") {
+    return "/elections/results";
+  }
+
+  const electionDetailMatch = normalizedPath.match(/^\/(\d+)$/);
+  if (electionDetailMatch) {
+    return `/elections/${electionDetailMatch[1]}`;
+  }
+
+  const electionResultsMatch = normalizedPath.match(/^\/(\d+)\/results$/);
+  if (electionResultsMatch) {
+    return `/elections/${electionResultsMatch[1]}/results`;
+  }
+
+  return null;
+}
+
 export function getElectionUrl(path = "/elections") {
   const normalizedPath = getElectionPath(path);
+  const publicPath = getPublicElectionPath(normalizedPath);
   const normalizedSubdomain = ELECTIONS_SUBDOMAIN ? normalizeSubdomain(ELECTIONS_SUBDOMAIN) : "";
 
   if (ELECTIONS_APP_URL) {
-    return sanitizeBaseUrl(ELECTIONS_APP_URL, normalizedPath);
+    return sanitizeBaseUrl(ELECTIONS_APP_URL, publicPath);
   }
 
   if (!normalizedSubdomain || !APP_URL) {
@@ -53,7 +102,7 @@ export function getElectionUrl(path = "/elections") {
     }
 
     url.hostname = buildSubdomainHost(url.hostname, normalizedSubdomain);
-    url.pathname = normalizedPath;
+    url.pathname = publicPath;
     url.search = "";
     url.hash = "";
     return url.toString();

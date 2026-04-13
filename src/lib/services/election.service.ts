@@ -329,46 +329,39 @@ export async function updateElection(id: number, data: Partial<CreateElectionDat
     candidateStudentMap = await resolveCandidateStudentIds(validated.positions as CreateElectionData["positions"]);
   }
 
-  const election = await prisma.$transaction(async (tx) => {
-    if (validated.positions) {
-      await tx.electionPosition.deleteMany({
-        where: { electionId: id },
-      });
-    }
-
-    return tx.election.update({
-      where: { id },
-      data: {
-        title: validated.title,
-        description: validated.description,
-        startAt: validated.startAt,
-        endAt: validated.endAt,
-        resultVisibility: validated.resultVisibility,
-        ...(validated.positions
-          ? {
-              positions: {
-                create: validated.positions.map((position, index) => ({
-                  title: position.title,
-                  description: position.description,
-                  sortOrder: index,
-                  seatCount: position.seatCount,
-                  votingMode: getVotingMode(position.candidates.length),
-                  approvalNotice: getApprovalNotice(position.candidates.length),
-                  candidates: {
-                    create: position.candidates.map((candidate) => ({
-                      studentId: candidateStudentMap!.get(candidate.studentId.trim())!,
-                      bio: candidate.bio,
-                      manifesto: candidate.manifesto,
-                      photoUrl: candidate.photoUrl,
-                    })),
-                  },
-                })),
-              },
-            }
-          : {}),
-      },
-      include: electionInclude,
-    });
+  const election = await prisma.election.update({
+    where: { id },
+    data: {
+      title: validated.title,
+      description: validated.description,
+      startAt: validated.startAt,
+      endAt: validated.endAt,
+      resultVisibility: validated.resultVisibility,
+      ...(validated.positions
+        ? {
+            positions: {
+              deleteMany: {},
+              create: validated.positions.map((position, index) => ({
+                title: position.title,
+                description: position.description,
+                sortOrder: index,
+                seatCount: position.seatCount,
+                votingMode: getVotingMode(position.candidates.length),
+                approvalNotice: getApprovalNotice(position.candidates.length),
+                candidates: {
+                  create: position.candidates.map((candidate) => ({
+                    studentId: candidateStudentMap!.get(candidate.studentId.trim())!,
+                    bio: candidate.bio,
+                    manifesto: candidate.manifesto,
+                    photoUrl: candidate.photoUrl,
+                  })),
+                },
+              })),
+            },
+          }
+        : {}),
+    },
+    include: electionInclude,
   });
 
   return serializeElection(election);

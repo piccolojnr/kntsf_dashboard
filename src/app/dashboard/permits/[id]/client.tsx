@@ -48,8 +48,8 @@ export function PermitDetailClient({
     0,
     Math.ceil(
       (new Date(permit.expiryDate).getTime() - new Date().getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
+        (1000 * 60 * 60 * 24),
+    ),
   );
 
   const getStatusIcon = () => {
@@ -150,7 +150,7 @@ export function PermitDetailClient({
 
     if (
       !confirm(
-        "Are you sure you want to delete this permit? This action cannot be undone and will also delete the associated payment record."
+        "Are you sure you want to delete this permit? This action cannot be undone and will also delete the associated payment record.",
       )
     )
       return;

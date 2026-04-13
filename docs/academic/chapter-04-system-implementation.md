@@ -125,4 +125,4 @@ Additional snippets (e.g. permit creation, Paystack callback, verification endpo
 - **Database**: Run Prisma migrations against the production database before or during deployment.
 - **User documentation**: The project includes user-facing documentation (e.g. in `docs/` or `dash.md`) describing dashboard navigation, roles, and main workflows (e.g. creating a permit, verifying a permit, managing events and news). Operators and administrators can use this for training and reference.
 
-*(Add specific deployment platform (e.g. Vercel, VPS) and any CI/CD or backup steps if applicable.)*
+The application is deployed on **Vercel**, which provides serverless hosting for Next.js, automatic builds from the repository, and environment variable configuration. Database and external services (e.g. MySQL, Paystack, Cloudinary) are configured via Vercel environment variables; CI/CD is handled by Vercel’s built-in pipeline on push to the connected branch.

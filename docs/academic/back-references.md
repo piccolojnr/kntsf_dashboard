@@ -18,8 +18,14 @@ Nitko (2000, p. 36) noted that "validity is the soundness of interpretation and 
 
 4. Cloudinary. (n.d.). *Cloudinary – Image and video API*. https://cloudinary.com/
 
-5. *(Add references for literature cited in Chapter 2 and elsewhere, e.g. books on information systems, web development, database design, or similar systems you reviewed.)*
+5. University of Ghana. (n.d.). *Steps for academic & residential registration online – Continuing students*. https://old1.ug.edu.gh/aad/registration-continuing
+
+6. University of Ghana, International Programmes Office. (n.d.). *Resident permit*. https://ipo.ug.edu.gh/help/resident-permit
+
+7. University of California, Santa Barbara, Transportation & Parking Services. (n.d.). *ePermits – Parking permits*. https://www.tps.ucsb.edu/parking-permits/epermits
+
+8. *(Add further references for any other literature cited in Chapter 2 or elsewhere—e.g. books on information systems, web development, database design.)*
 
 ---
 
-*Format each reference according to APA 7th edition (or the edition specified by your department). Include author(s), year, title, and publication/source details as required.*
+*Format each reference according to APA 7th edition (or the edition specified by your department). Include author(s), year, title, and publication/source details as required. Replace “n.d.” with publication year when available.*

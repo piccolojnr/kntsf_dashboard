@@ -13,7 +13,7 @@ export default async function PublicElectionResultsDetailPage({ params }: Public
   }
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-10">
+    <div className="container mx-auto max-w-6xl px-4 py-10">
       <Suspense fallback={<div>Loading results...</div>}>
         <PublicElectionResultsClient electionId={electionId} />
       </Suspense>

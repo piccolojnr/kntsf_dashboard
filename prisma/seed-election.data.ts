@@ -1,11 +1,11 @@
 export const DEMO_ELECTION_IDS = {
   draft: 9001,
-  pendingApproval: 9002,
-  approved: 9003,
-  active: 9004,
-  closed: 9005,
-  resultsPublished: 9006,
-  archived: 9007,
+  // pendingApproval: 9002,
+  // approved: 9003,
+  // active: 9004,
+  // closed: 9005,
+  // resultsPublished: 9006,
+  // archived: 9007,
 } as const;
 
 export const demoStudents = [

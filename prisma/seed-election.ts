@@ -110,7 +110,7 @@ async function createElectionSkeleton({
       status,
       resultVisibility,
       createdById: adminUserId,
-      approvedById: [ 'APPROVED', 'ACTIVE', 'CLOSED', 'RESULTS_PUBLISHED', 'ARCHIVED' ].includes(status) ? adminUserId : null,
+      approvedById: ['APPROVED', 'ACTIVE', 'CLOSED', 'RESULTS_PUBLISHED', 'ARCHIVED'].includes(status) ? adminUserId : null,
       approvedAt: approvalOffsetDays !== undefined ? daysFromNow(approvalOffsetDays, 12) : null,
       publishedAt: publishedOffsetDays !== undefined ? daysFromNow(publishedOffsetDays, 12) : null,
       rejectionReason: null,
@@ -124,7 +124,7 @@ async function createElectionSkeleton({
       status,
       resultVisibility,
       createdById: adminUserId,
-      approvedById: [ 'APPROVED', 'ACTIVE', 'CLOSED', 'RESULTS_PUBLISHED', 'ARCHIVED' ].includes(status) ? adminUserId : null,
+      approvedById: ['APPROVED', 'ACTIVE', 'CLOSED', 'RESULTS_PUBLISHED', 'ARCHIVED'].includes(status) ? adminUserId : null,
       approvedAt: approvalOffsetDays !== undefined ? daysFromNow(approvalOffsetDays, 12) : null,
       publishedAt: publishedOffsetDays !== undefined ? daysFromNow(publishedOffsetDays, 12) : null,
     },
@@ -314,67 +314,67 @@ async function main() {
       status: 'DRAFT' as const,
       resultVisibility: 'AFTER_PUBLISH' as const,
     },
-    {
-      id: DEMO_ELECTION_IDS.pendingApproval,
-      title: 'Pending Approval Election Demo',
-      description: 'Election submitted and waiting for admin approval.',
-      startAt: daysFromNow(10, 9),
-      endAt: daysFromNow(12, 17),
-      status: 'PENDING_APPROVAL' as const,
-      resultVisibility: 'AFTER_PUBLISH' as const,
-    },
-    {
-      id: DEMO_ELECTION_IDS.approved,
-      title: 'Approved Election Demo',
-      description: 'Approved election that is scheduled but not yet active.',
-      startAt: daysFromNow(5, 9),
-      endAt: daysFromNow(7, 17),
-      status: 'APPROVED' as const,
-      resultVisibility: 'AFTER_PUBLISH' as const,
-      approvalOffsetDays: -1,
-    },
-    {
-      id: DEMO_ELECTION_IDS.active,
-      title: 'Active Election Demo',
-      description: 'Currently active election for testing student voting and approval ballots.',
-      startAt: daysFromNow(-1, 9),
-      endAt: daysFromNow(2, 17),
-      status: 'ACTIVE' as const,
-      resultVisibility: 'AFTER_CLOSE' as const,
-      approvalOffsetDays: -3,
-    },
-    {
-      id: DEMO_ELECTION_IDS.closed,
-      title: 'Closed Election Demo',
-      description: 'Closed election awaiting result publication.',
-      startAt: daysFromNow(-8, 9),
-      endAt: daysFromNow(-4, 17),
-      status: 'CLOSED' as const,
-      resultVisibility: 'AFTER_PUBLISH' as const,
-      approvalOffsetDays: -10,
-    },
-    {
-      id: DEMO_ELECTION_IDS.resultsPublished,
-      title: 'Published Results Election Demo',
-      description: 'Published election results including a single-candidate approval vote.',
-      startAt: daysFromNow(-16, 9),
-      endAt: daysFromNow(-12, 17),
-      status: 'RESULTS_PUBLISHED' as const,
-      resultVisibility: 'AFTER_CLOSE' as const,
-      approvalOffsetDays: -18,
-      publishedOffsetDays: -11,
-    },
-    {
-      id: DEMO_ELECTION_IDS.archived,
-      title: 'Archived Election Demo',
-      description: 'Archived election kept for dashboard history testing.',
-      startAt: daysFromNow(-24, 9),
-      endAt: daysFromNow(-20, 17),
-      status: 'ARCHIVED' as const,
-      resultVisibility: 'AFTER_CLOSE' as const,
-      approvalOffsetDays: -26,
-      publishedOffsetDays: -19,
-    },
+    // {
+    //   id: DEMO_ELECTION_IDS.pendingApproval,
+    //   title: 'Pending Approval Election Demo',
+    //   description: 'Election submitted and waiting for admin approval.',
+    //   startAt: daysFromNow(10, 9),
+    //   endAt: daysFromNow(12, 17),
+    //   status: 'PENDING_APPROVAL' as const,
+    //   resultVisibility: 'AFTER_PUBLISH' as const,
+    // },
+    // {
+    //   id: DEMO_ELECTION_IDS.approved,
+    //   title: 'Approved Election Demo',
+    //   description: 'Approved election that is scheduled but not yet active.',
+    //   startAt: daysFromNow(5, 9),
+    //   endAt: daysFromNow(7, 17),
+    //   status: 'APPROVED' as const,
+    //   resultVisibility: 'AFTER_PUBLISH' as const,
+    //   approvalOffsetDays: -1,
+    // },
+    // {
+    //   id: DEMO_ELECTION_IDS.active,
+    //   title: 'Active Election Demo',
+    //   description: 'Currently active election for testing student voting and approval ballots.',
+    //   startAt: daysFromNow(-1, 9),
+    //   endAt: daysFromNow(2, 17),
+    //   status: 'ACTIVE' as const,
+    //   resultVisibility: 'AFTER_CLOSE' as const,
+    //   approvalOffsetDays: -3,
+    // },
+    // {
+    //   id: DEMO_ELECTION_IDS.closed,
+    //   title: 'Closed Election Demo',
+    //   description: 'Closed election awaiting result publication.',
+    //   startAt: daysFromNow(-8, 9),
+    //   endAt: daysFromNow(-4, 17),
+    //   status: 'CLOSED' as const,
+    //   resultVisibility: 'AFTER_PUBLISH' as const,
+    //   approvalOffsetDays: -10,
+    // },
+    // {
+    //   id: DEMO_ELECTION_IDS.resultsPublished,
+    //   title: 'Published Results Election Demo',
+    //   description: 'Published election results including a single-candidate approval vote.',
+    //   startAt: daysFromNow(-16, 9),
+    //   endAt: daysFromNow(-12, 17),
+    //   status: 'RESULTS_PUBLISHED' as const,
+    //   resultVisibility: 'AFTER_CLOSE' as const,
+    //   approvalOffsetDays: -18,
+    //   publishedOffsetDays: -11,
+    // },
+    // {
+    //   id: DEMO_ELECTION_IDS.archived,
+    //   title: 'Archived Election Demo',
+    //   description: 'Archived election kept for dashboard history testing.',
+    //   startAt: daysFromNow(-24, 9),
+    //   endAt: daysFromNow(-20, 17),
+    //   status: 'ARCHIVED' as const,
+    //   resultVisibility: 'AFTER_CLOSE' as const,
+    //   approvalOffsetDays: -26,
+    //   publishedOffsetDays: -19,
+    // },
   ];
 
   for (const seed of lifecycleSeeds) {
@@ -384,16 +384,16 @@ async function main() {
     });
     const positions = await createElectionPositions(seed.id, studentMap);
 
-    if (seed.id === DEMO_ELECTION_IDS.resultsPublished) {
-      await seedBallotsForResultsPublishedElection(seed.id, studentMap, positions);
-    }
+    // if (seed.id === DEMO_ELECTION_IDS.resultsPublished) {
+    //   await seedBallotsForResultsPublishedElection(seed.id, studentMap, positions);
+    // }
 
-    if (seed.id === DEMO_ELECTION_IDS.archived) {
-      await prisma.electionPosition.updateMany({
-        where: { electionId: seed.id },
-        data: { outcomeStatus: 'ELECTED' },
-      });
-    }
+    // if (seed.id === DEMO_ELECTION_IDS.archived) {
+    //   await prisma.electionPosition.updateMany({
+    //     where: { electionId: seed.id },
+    //     data: { outcomeStatus: 'ELECTED' },
+    //   });
+    // }
   }
 
   console.log(`Seeded demo elections for phases: ${Object.keys(DEMO_ELECTION_IDS).join(', ')}.`);

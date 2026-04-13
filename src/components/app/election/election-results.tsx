@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import Image from "next/image";
 import { AlertTriangle, Award, BarChart3, Calendar, CheckCircle2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,9 +93,12 @@ export function ElectionResults({ election }: ElectionResultsProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 {candidate ? (
-                  <div className="rounded-lg border p-4">
-                    <p className="font-medium">{candidate.student.name || candidate.student.studentId}</p>
-                    <p className="text-sm text-muted-foreground">{candidate.student.studentId}</p>
+                  <div className="flex items-center gap-3 rounded-lg border p-4">
+                    <CandidatePhoto candidate={candidate} />
+                    <div>
+                      <p className="font-medium">{candidate.student.name || candidate.student.studentId}</p>
+                      <p className="text-sm text-muted-foreground">{candidate.student.studentId}</p>
+                    </div>
                   </div>
                 ) : null}
                 {position.approvalNotice ? (
@@ -150,9 +154,12 @@ export function ElectionResults({ election }: ElectionResultsProps) {
                 return (
                   <div key={candidate.id} className="space-y-2">
                     <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-medium">{candidate.student.name || candidate.student.studentId}</p>
-                        <p className="text-sm text-muted-foreground">{candidate.student.studentId}</p>
+                      <div className="flex items-center gap-3">
+                        <CandidatePhoto candidate={candidate} />
+                        <div>
+                          <p className="font-medium">{candidate.student.name || candidate.student.studentId}</p>
+                          <p className="text-sm text-muted-foreground">{candidate.student.studentId}</p>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="font-medium">
@@ -169,6 +176,27 @@ export function ElectionResults({ election }: ElectionResultsProps) {
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+function CandidatePhoto({ candidate }: { candidate: any }) {
+  if (!candidate.photoUrl) {
+    return (
+      <div className="flex h-14 w-14 items-center justify-center rounded-full border bg-muted text-xs text-muted-foreground">
+        No image
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-14 w-14 overflow-hidden rounded-full border">
+      <Image
+        src={candidate.photoUrl}
+        alt={`${candidate.student.name || candidate.student.studentId} profile`}
+        fill
+        className="object-cover"
+      />
     </div>
   );
 }

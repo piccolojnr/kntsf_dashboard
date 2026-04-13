@@ -194,6 +194,9 @@ export async function archiveElectionAction(id: number) {
     await logElectionAction(userId, "election.archive", `Archived election "${election.title}" (#${id})`);
     revalidatePath("/dashboard/elections");
     revalidatePath(`/dashboard/elections/${id}`);
+    revalidatePath("/elections");
+    revalidatePath("/elections/results");
+    revalidatePath(`/elections/${id}/results`);
     return { success: true, data: election };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Failed to archive election" };
@@ -245,6 +248,15 @@ export async function getElectionResultsAction(id: number, includeHidden = false
     }
     const election = await services.election.getElectionResults(id, includeHidden);
     return { success: true, data: election };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch election results" };
+  }
+}
+
+export async function getPublicElectionResultsListAction() {
+  try {
+    const elections = await services.election.getPublicElectionResultsList();
+    return { success: true, data: elections };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Failed to fetch election results" };
   }

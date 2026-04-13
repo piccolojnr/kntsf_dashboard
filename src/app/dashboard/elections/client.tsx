@@ -185,15 +185,17 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
                       Close
                     </Button>
                   ) : null}
-                  {permissions.isAdmin && election.status === "CLOSED" ? (
+                  {permissions.isAdmin && ["CLOSED", "RESULTS_PUBLISHED"].includes(election.status) ? (
                     <>
-                      <Button
-                        size="sm"
-                        onClick={() => runAction(`publish-${election.id}`, () => publishElectionResultsAction(election.id), "Election results published")}
-                        disabled={busyAction === `publish-${election.id}`}
-                      >
-                        Publish Results
-                      </Button>
+                      {election.status === "CLOSED" ? (
+                        <Button
+                          size="sm"
+                          onClick={() => runAction(`publish-${election.id}`, () => publishElectionResultsAction(election.id), "Election results published")}
+                          disabled={busyAction === `publish-${election.id}`}
+                        >
+                          Publish Results
+                        </Button>
+                      ) : null}
                       <Button
                         size="sm"
                         variant="outline"

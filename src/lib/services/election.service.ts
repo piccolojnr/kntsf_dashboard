@@ -154,6 +154,7 @@ function ensureDraftStatus(status: string) {
 }
 
 function canViewResults(status: string, resultVisibility: string, publishedAt: Date | null) {
+  if (status === "ARCHIVED") return false;
   if (status === "RESULTS_PUBLISHED") return true;
   if (resultVisibility === "AFTER_CLOSE" && (status === "CLOSED" || status === "RESULTS_PUBLISHED")) return true;
   return Boolean(publishedAt);
@@ -560,6 +561,35 @@ export async function getActiveElectionsForVoting() {
       },
     },
   });
+}
+
+export async function getPublicElectionResultsList() {
+  const elections = await prisma.election.findMany({
+    where: {
+      status: {
+        in: ["CLOSED", "RESULTS_PUBLISHED"],
+      },
+    },
+    include: electionInclude,
+    orderBy: {
+      endAt: "desc",
+    },
+  });
+
+  const visibleElections = elections.filter((election) =>
+    canViewResults(election.status, election.resultVisibility, election.publishedAt)
+  );
+
+  const totalEligibleVoters = await prisma.student.count({
+    where: { deletedAt: null },
+  });
+
+  return visibleElections.map((election) => ({
+    ...election,
+    totalEligibleVoters,
+    turnout: election.participations.length,
+    turnoutRate: totalEligibleVoters > 0 ? (election.participations.length / totalEligibleVoters) * 100 : 0,
+  }));
 }
 
 export async function getElectionBallot(id: number) {

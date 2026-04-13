@@ -10,6 +10,7 @@ import {
   Mail,
   Package,
   Brain,
+  BadgeCheck,
   Vote,
 } from "lucide-react";
 import * as React from "react";
@@ -75,6 +76,12 @@ export function AppSidebar({
         url: "/dashboard/polls",
         icon: Vote,
         show: () => permissions.isPro,
+      },
+      {
+        title: "Elections",
+        url: "/dashboard/elections",
+        icon: BadgeCheck,
+        show: () => permissions.isExecutive,
       },
       {
         title: "Documents",

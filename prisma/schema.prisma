@@ -32,6 +32,8 @@ model User {
   permits             Permit[]
   recoveryTokens      RecoveryToken[]
   StudentIdea         StudentIdea[]
+  createdElections    Election[]        @relation("ElectionCreatedBy")
+  approvedElections   Election[]        @relation("ElectionApprovedBy")
   role                Role              @relation(fields: [roleId], references: [id])
   studentSouvenirs    StudentSouvenir[]
 
@@ -48,23 +50,25 @@ model Role {
 }
 
 model Student {
-  id               Int               @id @default(autoincrement())
-  studentId        String            @unique
-  name             String?
-  email            String?
-  course           String?
-  level            String?
-  number           String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  deletedAt        DateTime?
-  GameUser         GameUser?
-  payments         Payment[]
-  permits          Permit[]
-  pollOptions      PollOption[]
-  pollVotes        PollVote[]
-  StudentIdea      StudentIdea[]
-  studentSouvenirs StudentSouvenir[]
+  id                     Int                     @id @default(autoincrement())
+  studentId              String                  @unique
+  name                   String?
+  email                  String?
+  course                 String?
+  level                  String?
+  number                 String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  deletedAt              DateTime?
+  GameUser               GameUser?
+  payments               Payment[]
+  permits                Permit[]
+  pollOptions            PollOption[]
+  pollVotes              PollVote[]
+  electionCandidates     ElectionCandidate[]
+  electionParticipations ElectionParticipation[]
+  StudentIdea            StudentIdea[]
+  studentSouvenirs       StudentSouvenir[]
 
   @@index([studentId])
   @@index([email])
@@ -388,6 +392,107 @@ model PollVote {
   @@index([optionId], map: "PollVote_optionId_fkey")
 }
 
+model Election {
+  id               Int                      @id @default(autoincrement())
+  title            String
+  description      String?                  @db.Text
+  startAt          DateTime
+  endAt            DateTime
+  status           ElectionStatus           @default(DRAFT)
+  resultVisibility ElectionResultVisibility @default(AFTER_PUBLISH)
+  createdById      Int
+  approvedById     Int?
+  approvedAt       DateTime?
+  publishedAt      DateTime?
+  rejectionReason  String?                  @db.Text
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  approvedBy       User?                    @relation("ElectionApprovedBy", fields: [approvedById], references: [id])
+  createdBy        User                     @relation("ElectionCreatedBy", fields: [createdById], references: [id])
+  ballots          ElectionBallot[]
+  participations   ElectionParticipation[]
+  positions        ElectionPosition[]
+
+  @@index([status])
+  @@index([startAt, endAt])
+  @@index([createdById], map: "Election_createdById_fkey")
+  @@index([approvedById], map: "Election_approvedById_fkey")
+}
+
+model ElectionPosition {
+  id          Int                    @id @default(autoincrement())
+  electionId  Int
+  title       String
+  description String?                @db.Text
+  sortOrder   Int                    @default(0)
+  seatCount   Int                    @default(1)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  election    Election               @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidates  ElectionCandidate[]
+  choices     ElectionBallotChoice[]
+
+  @@index([electionId])
+}
+
+model ElectionCandidate {
+  id         Int                    @id @default(autoincrement())
+  positionId Int
+  studentId  Int
+  bio        String?                @db.Text
+  manifesto  String?                @db.Text
+  photoUrl   String?
+  status     CandidateStatus        @default(APPROVED)
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  choices    ElectionBallotChoice[]
+  position   ElectionPosition       @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  student    Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([positionId, studentId])
+  @@index([positionId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model ElectionParticipation {
+  id          Int      @id @default(autoincrement())
+  electionId  Int
+  studentId   Int
+  submittedAt DateTime @default(now())
+  election    Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([electionId, studentId])
+  @@index([electionId])
+  @@index([studentId])
+}
+
+model ElectionBallot {
+  id          Int                    @id @default(autoincrement())
+  electionId  Int
+  submittedAt DateTime               @default(now())
+  election    Election               @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  choices     ElectionBallotChoice[]
+
+  @@index([electionId])
+}
+
+model ElectionBallotChoice {
+  id          Int               @id @default(autoincrement())
+  ballotId    Int
+  positionId  Int
+  candidateId Int
+  ballot      ElectionBallot    @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  candidate   ElectionCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  position    ElectionPosition  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@unique([ballotId, positionId])
+  @@index([ballotId])
+  @@index([positionId])
+  @@index([candidateId])
+}
+
 model GamePasswordResetToken {
   id         String   @id @default(uuid())
   token      String   @unique
@@ -439,6 +544,26 @@ enum PollType {
 enum OptionStatus {
   ACTIVE
   MERGED
+}
+
+enum ElectionStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  ACTIVE
+  CLOSED
+  RESULTS_PUBLISHED
+  ARCHIVED
+}
+
+enum ElectionResultVisibility {
+  AFTER_PUBLISH
+  AFTER_CLOSE
+}
+
+enum CandidateStatus {
+  APPROVED
+  WITHDRAWN
 }
 
 model Souvenir {

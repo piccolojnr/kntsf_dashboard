@@ -14,6 +14,7 @@ import * as  DocumentService from "./document.service";
 import * as  IdeaService from "./idea.service";
 import * as  PaymentService from "./payment.service";
 import * as  PollService from "./poll.service";
+import * as  ElectionService from "./election.service";
 import * as  SouvenirService from "./souvenir.service";
 
 const services = {
@@ -33,6 +34,7 @@ const services = {
     idea: IdeaService,
     payment: PaymentService,
     poll: PollService,
+    election: ElectionService,
     souvenir: SouvenirService,
 }
 

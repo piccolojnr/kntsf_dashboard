@@ -1,36 +1,56 @@
 import { PrismaClient } from '@prisma/client';
-import { DEMO_ELECTION_ID, demoStudents } from './seed-election.data';
+import { demoElectionIdList, demoStudents } from './seed-election.data';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Removing demo election seed...');
+  console.log('Removing demo election lifecycle seed...');
 
   await prisma.electionBallotChoice.deleteMany({
     where: {
       ballot: {
-        electionId: DEMO_ELECTION_ID,
+        electionId: {
+          in: demoElectionIdList,
+        },
       },
     },
   });
   await prisma.electionBallot.deleteMany({
-    where: { electionId: DEMO_ELECTION_ID },
+    where: {
+      electionId: {
+        in: demoElectionIdList,
+      },
+    },
   });
   await prisma.electionParticipation.deleteMany({
-    where: { electionId: DEMO_ELECTION_ID },
+    where: {
+      electionId: {
+        in: demoElectionIdList,
+      },
+    },
   });
   await prisma.electionCandidate.deleteMany({
     where: {
       position: {
-        electionId: DEMO_ELECTION_ID,
+        electionId: {
+          in: demoElectionIdList,
+        },
       },
     },
   });
   await prisma.electionPosition.deleteMany({
-    where: { electionId: DEMO_ELECTION_ID },
+    where: {
+      electionId: {
+        in: demoElectionIdList,
+      },
+    },
   });
   await prisma.election.deleteMany({
-    where: { id: DEMO_ELECTION_ID },
+    where: {
+      id: {
+        in: demoElectionIdList,
+      },
+    },
   });
 
   await prisma.student.deleteMany({
@@ -41,7 +61,7 @@ async function main() {
     },
   });
 
-  console.log(`Demo election ${DEMO_ELECTION_ID} and its sample students have been removed.`);
+  console.log(`Removed demo elections ${demoElectionIdList.join(', ')} and their sample students.`);
 }
 
 main()

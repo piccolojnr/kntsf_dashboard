@@ -1,4 +1,12 @@
-export const DEMO_ELECTION_ID = 9001;
+export const DEMO_ELECTION_IDS = {
+  draft: 9001,
+  pendingApproval: 9002,
+  approved: 9003,
+  active: 9004,
+  closed: 9005,
+  resultsPublished: 9006,
+  archived: 9007,
+} as const;
 
 export const demoStudents = [
   {
@@ -50,3 +58,5 @@ export const demoStudents = [
     number: '0201000006',
   },
 ] as const;
+
+export const demoElectionIdList = Object.values(DEMO_ELECTION_IDS);

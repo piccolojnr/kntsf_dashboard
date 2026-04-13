@@ -1,20 +1,19 @@
-import { PrismaClient } from '@prisma/client';
-import { DEMO_ELECTION_ID, demoStudents } from './seed-election.data';
+import { PrismaClient, ElectionStatus, ElectionResultVisibility } from '@prisma/client';
+import { DEMO_ELECTION_IDS, demoStudents } from './seed-election.data';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('Seeding demo election...');
+const APPROVAL_NOTICE =
+  'This position has one candidate. You are voting to approve or reject the candidate. If rejected, the committee will appoint someone to fill the role.';
 
-  const adminUser = await prisma.user.findUnique({
-    where: { username: 'admin' },
-    select: { id: true },
-  });
+function daysFromNow(days: number, hour: number, minute = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
 
-  if (!adminUser) {
-    throw new Error("Admin user not found. Run 'pnpm prisma:seed' first.");
-  }
-
+async function ensureDemoStudents() {
   for (const student of demoStudents) {
     await prisma.student.upsert({
       where: { studentId: student.studentId },
@@ -49,67 +48,100 @@ async function main() {
     }
   }
 
-  await prisma.election.upsert({
-    where: { id: DEMO_ELECTION_ID },
-    update: {
-      title: 'SRC General Election Demo',
-      description: 'Sample multi-position election seeded for local development and UX testing, including a single-candidate approval vote.',
-      startAt: new Date('2026-04-10T09:00:00.000Z'),
-      endAt: new Date('2026-04-20T17:00:00.000Z'),
-      status: 'RESULTS_PUBLISHED',
-      resultVisibility: 'AFTER_CLOSE',
-      createdById: adminUser.id,
-      approvedById: adminUser.id,
-      approvedAt: new Date('2026-04-09T12:00:00.000Z'),
-      publishedAt: new Date('2026-04-21T12:00:00.000Z'),
-      rejectionReason: null,
-    },
-    create: {
-      id: DEMO_ELECTION_ID,
-      title: 'SRC General Election Demo',
-      description: 'Sample multi-position election seeded for local development and UX testing, including a single-candidate approval vote.',
-      startAt: new Date('2026-04-10T09:00:00.000Z'),
-      endAt: new Date('2026-04-20T17:00:00.000Z'),
-      status: 'RESULTS_PUBLISHED',
-      resultVisibility: 'AFTER_CLOSE',
-      createdById: adminUser.id,
-      approvedById: adminUser.id,
-      approvedAt: new Date('2026-04-09T12:00:00.000Z'),
-      publishedAt: new Date('2026-04-21T12:00:00.000Z'),
-    },
-  });
+  return studentMap;
+}
 
+async function resetElectionStructure(electionId: number) {
   await prisma.electionBallotChoice.deleteMany({
     where: {
       ballot: {
-        electionId: DEMO_ELECTION_ID,
+        electionId,
       },
     },
   });
   await prisma.electionBallot.deleteMany({
-    where: { electionId: DEMO_ELECTION_ID },
+    where: { electionId },
   });
   await prisma.electionParticipation.deleteMany({
-    where: { electionId: DEMO_ELECTION_ID },
+    where: { electionId },
   });
   await prisma.electionCandidate.deleteMany({
     where: {
       position: {
-        electionId: DEMO_ELECTION_ID,
+        electionId,
       },
     },
   });
   await prisma.electionPosition.deleteMany({
-    where: { electionId: DEMO_ELECTION_ID },
+    where: { electionId },
+  });
+}
+
+async function createElectionSkeleton({
+  id,
+  title,
+  description,
+  startAt,
+  endAt,
+  status,
+  resultVisibility,
+  adminUserId,
+  approvalOffsetDays,
+  publishedOffsetDays,
+}: {
+  id: number;
+  title: string;
+  description: string;
+  startAt: Date;
+  endAt: Date;
+  status: ElectionStatus;
+  resultVisibility: ElectionResultVisibility;
+  adminUserId: number;
+  approvalOffsetDays?: number;
+  publishedOffsetDays?: number;
+}) {
+  await prisma.election.upsert({
+    where: { id },
+    update: {
+      title,
+      description,
+      startAt,
+      endAt,
+      status,
+      resultVisibility,
+      createdById: adminUserId,
+      approvedById: [ 'APPROVED', 'ACTIVE', 'CLOSED', 'RESULTS_PUBLISHED', 'ARCHIVED' ].includes(status) ? adminUserId : null,
+      approvedAt: approvalOffsetDays !== undefined ? daysFromNow(approvalOffsetDays, 12) : null,
+      publishedAt: publishedOffsetDays !== undefined ? daysFromNow(publishedOffsetDays, 12) : null,
+      rejectionReason: null,
+    },
+    create: {
+      id,
+      title,
+      description,
+      startAt,
+      endAt,
+      status,
+      resultVisibility,
+      createdById: adminUserId,
+      approvedById: [ 'APPROVED', 'ACTIVE', 'CLOSED', 'RESULTS_PUBLISHED', 'ARCHIVED' ].includes(status) ? adminUserId : null,
+      approvedAt: approvalOffsetDays !== undefined ? daysFromNow(approvalOffsetDays, 12) : null,
+      publishedAt: publishedOffsetDays !== undefined ? daysFromNow(publishedOffsetDays, 12) : null,
+    },
   });
 
+  await resetElectionStructure(id);
+}
+
+async function createElectionPositions(electionId: number, studentMap: Map<string, number>) {
   const presidentPosition = await prisma.electionPosition.create({
     data: {
-      electionId: DEMO_ELECTION_ID,
+      electionId,
       title: 'President',
       description: 'Leads the SRC executive council.',
       sortOrder: 0,
       seatCount: 1,
+      votingMode: 'CANDIDATE_SELECTION',
       candidates: {
         create: [
           {
@@ -125,18 +157,17 @@ async function main() {
         ],
       },
     },
-    include: {
-      candidates: true,
-    },
+    include: { candidates: true },
   });
 
   const secretaryPosition = await prisma.electionPosition.create({
     data: {
-      electionId: DEMO_ELECTION_ID,
+      electionId,
       title: 'General Secretary',
       description: 'Coordinates records, communication, and administration.',
       sortOrder: 1,
       seatCount: 1,
+      votingMode: 'CANDIDATE_SELECTION',
       candidates: {
         create: [
           {
@@ -152,22 +183,19 @@ async function main() {
         ],
       },
     },
-    include: {
-      candidates: true,
-    },
+    include: { candidates: true },
   });
 
   const treasurerPosition = await prisma.electionPosition.create({
     data: {
-      electionId: DEMO_ELECTION_ID,
+      electionId,
       title: 'Treasurer',
       description: 'Oversees SRC finances and spending transparency.',
       sortOrder: 2,
       seatCount: 1,
       votingMode: 'CANDIDATE_APPROVAL',
-      approvalNotice:
-        'This position has one candidate. You are voting to approve or reject the candidate. If rejected, the committee will appoint someone to fill the role.',
-      outcomeStatus: 'APPOINTMENT_REQUIRED',
+      approvalNotice: APPROVAL_NOTICE,
+      outcomeStatus: 'PENDING',
       candidates: {
         create: [
           {
@@ -178,16 +206,22 @@ async function main() {
         ],
       },
     },
-    include: {
-      candidates: true,
-    },
+    include: { candidates: true },
   });
 
-  const presidentAmaCandidate = presidentPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/001')!);
-  const presidentKojoCandidate = presidentPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/002')!);
-  const secretaryEfuaCandidate = secretaryPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/003')!);
-  const secretaryYawCandidate = secretaryPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/004')!);
-  const treasurerAkosuaCandidate = treasurerPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/005')!);
+  return { presidentPosition, secretaryPosition, treasurerPosition };
+}
+
+async function seedBallotsForResultsPublishedElection(
+  electionId: number,
+  studentMap: Map<string, number>,
+  positions: Awaited<ReturnType<typeof createElectionPositions>>
+) {
+  const presidentAmaCandidate = positions.presidentPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/001')!);
+  const presidentKojoCandidate = positions.presidentPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/002')!);
+  const secretaryEfuaCandidate = positions.secretaryPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/003')!);
+  const secretaryYawCandidate = positions.secretaryPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/004')!);
+  const treasurerAkosuaCandidate = positions.treasurerPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/005')!);
 
   if (!presidentAmaCandidate || !presidentKojoCandidate || !secretaryEfuaCandidate || !secretaryYawCandidate || !treasurerAkosuaCandidate) {
     throw new Error('Failed to resolve seeded election candidates');
@@ -197,25 +231,25 @@ async function main() {
     {
       studentId: studentMap.get('KUC/EL/001')!,
       choices: [
-        { positionId: presidentPosition.id, candidateId: presidentAmaCandidate.id },
-        { positionId: secretaryPosition.id, candidateId: secretaryEfuaCandidate.id },
-        { positionId: treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'APPROVE' as const },
+        { positionId: positions.presidentPosition.id, candidateId: presidentAmaCandidate.id },
+        { positionId: positions.secretaryPosition.id, candidateId: secretaryEfuaCandidate.id },
+        { positionId: positions.treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'APPROVE' as const },
       ],
     },
     {
       studentId: studentMap.get('KUC/EL/002')!,
       choices: [
-        { positionId: presidentPosition.id, candidateId: presidentKojoCandidate.id },
-        { positionId: secretaryPosition.id, candidateId: secretaryYawCandidate.id },
-        { positionId: treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'REJECT' as const },
+        { positionId: positions.presidentPosition.id, candidateId: presidentKojoCandidate.id },
+        { positionId: positions.secretaryPosition.id, candidateId: secretaryYawCandidate.id },
+        { positionId: positions.treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'REJECT' as const },
       ],
     },
     {
       studentId: studentMap.get('KUC/EL/006')!,
       choices: [
-        { positionId: presidentPosition.id, candidateId: presidentAmaCandidate.id },
-        { positionId: secretaryPosition.id, candidateId: secretaryEfuaCandidate.id },
-        { positionId: treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'REJECT' as const },
+        { positionId: positions.presidentPosition.id, candidateId: presidentAmaCandidate.id },
+        { positionId: positions.secretaryPosition.id, candidateId: secretaryEfuaCandidate.id },
+        { positionId: positions.treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'REJECT' as const },
       ],
     },
   ];
@@ -223,7 +257,7 @@ async function main() {
   for (const voter of seededVoters) {
     await prisma.electionBallot.create({
       data: {
-        electionId: DEMO_ELECTION_ID,
+        electionId,
         choices: {
           create: voter.choices.map((choice) => ({
             positionId: choice.positionId,
@@ -236,13 +270,133 @@ async function main() {
 
     await prisma.electionParticipation.create({
       data: {
-        electionId: DEMO_ELECTION_ID,
+        electionId,
         studentId: voter.studentId,
       },
     });
   }
 
-  console.log(`Demo election seeded with id ${DEMO_ELECTION_ID}.`);
+  await prisma.electionPosition.update({
+    where: { id: positions.treasurerPosition.id },
+    data: { outcomeStatus: 'APPOINTMENT_REQUIRED' },
+  });
+  await prisma.electionPosition.update({
+    where: { id: positions.presidentPosition.id },
+    data: { outcomeStatus: 'ELECTED' },
+  });
+  await prisma.electionPosition.update({
+    where: { id: positions.secretaryPosition.id },
+    data: { outcomeStatus: 'ELECTED' },
+  });
+}
+
+async function main() {
+  console.log('Seeding demo elections across lifecycle phases...');
+
+  const adminUser = await prisma.user.findUnique({
+    where: { username: 'admin' },
+    select: { id: true },
+  });
+
+  if (!adminUser) {
+    throw new Error("Admin user not found. Run 'pnpm prisma:seed' first.");
+  }
+
+  const studentMap = await ensureDemoStudents();
+
+  const lifecycleSeeds = [
+    {
+      id: DEMO_ELECTION_IDS.draft,
+      title: 'Draft SRC Election Demo',
+      description: 'Draft election prepared for internal editing and candidate updates.',
+      startAt: daysFromNow(14, 9),
+      endAt: daysFromNow(16, 17),
+      status: 'DRAFT' as const,
+      resultVisibility: 'AFTER_PUBLISH' as const,
+    },
+    {
+      id: DEMO_ELECTION_IDS.pendingApproval,
+      title: 'Pending Approval Election Demo',
+      description: 'Election submitted and waiting for admin approval.',
+      startAt: daysFromNow(10, 9),
+      endAt: daysFromNow(12, 17),
+      status: 'PENDING_APPROVAL' as const,
+      resultVisibility: 'AFTER_PUBLISH' as const,
+    },
+    {
+      id: DEMO_ELECTION_IDS.approved,
+      title: 'Approved Election Demo',
+      description: 'Approved election that is scheduled but not yet active.',
+      startAt: daysFromNow(5, 9),
+      endAt: daysFromNow(7, 17),
+      status: 'APPROVED' as const,
+      resultVisibility: 'AFTER_PUBLISH' as const,
+      approvalOffsetDays: -1,
+    },
+    {
+      id: DEMO_ELECTION_IDS.active,
+      title: 'Active Election Demo',
+      description: 'Currently active election for testing student voting and approval ballots.',
+      startAt: daysFromNow(-1, 9),
+      endAt: daysFromNow(2, 17),
+      status: 'ACTIVE' as const,
+      resultVisibility: 'AFTER_CLOSE' as const,
+      approvalOffsetDays: -3,
+    },
+    {
+      id: DEMO_ELECTION_IDS.closed,
+      title: 'Closed Election Demo',
+      description: 'Closed election awaiting result publication.',
+      startAt: daysFromNow(-8, 9),
+      endAt: daysFromNow(-4, 17),
+      status: 'CLOSED' as const,
+      resultVisibility: 'AFTER_PUBLISH' as const,
+      approvalOffsetDays: -10,
+    },
+    {
+      id: DEMO_ELECTION_IDS.resultsPublished,
+      title: 'Published Results Election Demo',
+      description: 'Published election results including a single-candidate approval vote.',
+      startAt: daysFromNow(-16, 9),
+      endAt: daysFromNow(-12, 17),
+      status: 'RESULTS_PUBLISHED' as const,
+      resultVisibility: 'AFTER_CLOSE' as const,
+      approvalOffsetDays: -18,
+      publishedOffsetDays: -11,
+    },
+    {
+      id: DEMO_ELECTION_IDS.archived,
+      title: 'Archived Election Demo',
+      description: 'Archived election kept for dashboard history testing.',
+      startAt: daysFromNow(-24, 9),
+      endAt: daysFromNow(-20, 17),
+      status: 'ARCHIVED' as const,
+      resultVisibility: 'AFTER_CLOSE' as const,
+      approvalOffsetDays: -26,
+      publishedOffsetDays: -19,
+    },
+  ];
+
+  for (const seed of lifecycleSeeds) {
+    await createElectionSkeleton({
+      ...seed,
+      adminUserId: adminUser.id,
+    });
+    const positions = await createElectionPositions(seed.id, studentMap);
+
+    if (seed.id === DEMO_ELECTION_IDS.resultsPublished) {
+      await seedBallotsForResultsPublishedElection(seed.id, studentMap, positions);
+    }
+
+    if (seed.id === DEMO_ELECTION_IDS.archived) {
+      await prisma.electionPosition.updateMany({
+        where: { electionId: seed.id },
+        data: { outcomeStatus: 'ELECTED' },
+      });
+    }
+  }
+
+  console.log(`Seeded demo elections for phases: ${Object.keys(DEMO_ELECTION_IDS).join(', ')}.`);
 }
 
 main()

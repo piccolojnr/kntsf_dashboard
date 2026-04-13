@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccessRoles } from "@/lib/role";
 
 function formatStatus(status: string) {
@@ -66,6 +67,149 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
     return <div className="py-12 text-center"><RefreshCw className="mx-auto h-8 w-8 animate-spin" /></div>;
   }
 
+  const activeElections = elections.filter((election) => election.status !== "ARCHIVED");
+  const archivedElections = elections.filter((election) => election.status === "ARCHIVED");
+
+  const renderElectionCard = (election: any) => (
+    <Card key={election.id}>
+      <CardHeader>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <CardTitle>{election.title}</CardTitle>
+            {election.description ? <p className="text-sm text-muted-foreground">{election.description}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="capitalize">{formatStatus(election.status)}</Badge>
+              <Badge variant="outline">{election.positions.length} position{election.positions.length === 1 ? "" : "s"}</Badge>
+              <Badge variant="outline">{election.turnout} votes cast</Badge>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/dashboard/elections/${election.id}`}>
+                <Eye className="mr-2 h-4 w-4" />
+                View
+              </Link>
+            </Button>
+            {election.status === "DRAFT" ? (
+              <>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/dashboard/elections/${election.id}/edit`}>Edit</Link>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => runAction(`submit-${election.id}`, () => submitElectionForApprovalAction(election.id), "Election submitted for approval")}
+                  disabled={busyAction === `submit-${election.id}`}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit
+                </Button>
+              </>
+            ) : null}
+            {permissions.isAdmin && election.status === "PENDING_APPROVAL" ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => runAction(`approve-${election.id}`, () => approveElectionAction(election.id), "Election approved")}
+                  disabled={busyAction === `approve-${election.id}`}
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const reason = window.prompt("Reason for rejection", "Needs updated candidate list");
+                    if (!reason) return;
+                    runAction(`reject-${election.id}`, () => rejectElectionAction(election.id, reason), "Election returned to draft");
+                  }}
+                  disabled={busyAction === `reject-${election.id}`}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Reject
+                </Button>
+              </>
+            ) : null}
+            {permissions.isAdmin && election.status === "APPROVED" ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => runAction(`activate-${election.id}`, () => activateElectionAction(election.id), "Election activated")}
+                  disabled={busyAction === `activate-${election.id}`}
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  Activate
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => runAction(`close-${election.id}`, () => closeElectionAction(election.id), "Election closed")}
+                  disabled={busyAction === `close-${election.id}`}
+                >
+                  <Square className="mr-2 h-4 w-4" />
+                  Close
+                </Button>
+              </>
+            ) : null}
+            {permissions.isAdmin && election.status === "ACTIVE" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => runAction(`close-${election.id}`, () => closeElectionAction(election.id), "Election closed")}
+                disabled={busyAction === `close-${election.id}`}
+              >
+                <Square className="mr-2 h-4 w-4" />
+                Close
+              </Button>
+            ) : null}
+            {permissions.isAdmin && ["CLOSED", "RESULTS_PUBLISHED"].includes(election.status) ? (
+              <>
+                {election.status === "CLOSED" ? (
+                  <Button
+                    size="sm"
+                    onClick={() => runAction(`publish-${election.id}`, () => publishElectionResultsAction(election.id), "Election results published")}
+                    disabled={busyAction === `publish-${election.id}`}
+                  >
+                    Publish Results
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => runAction(`archive-${election.id}`, () => archiveElectionAction(election.id), "Election archived")}
+                  disabled={busyAction === `archive-${election.id}`}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </Button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 text-sm md:grid-cols-4">
+          <div>
+            <p className="font-medium">Start</p>
+            <p className="text-muted-foreground">{format(new Date(election.startAt), "MMM dd, yyyy h:mm a")}</p>
+          </div>
+          <div>
+            <p className="font-medium">End</p>
+            <p className="text-muted-foreground">{format(new Date(election.endAt), "MMM dd, yyyy h:mm a")}</p>
+          </div>
+          <div>
+            <p className="font-medium">Turnout</p>
+            <p className="text-muted-foreground">{election.turnoutRate.toFixed(1)}%</p>
+          </div>
+          <div>
+            <p className="font-medium">Visibility</p>
+            <p className="text-muted-foreground">{election.resultVisibility === "AFTER_CLOSE" ? "After close" : "After manual publish"}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -93,145 +237,36 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
           </CardContent>
         </Card>
       ) : (
-        elections.map((election) => (
-          <Card key={election.id}>
-            <CardHeader>
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-2">
-                  <CardTitle>{election.title}</CardTitle>
-                  {election.description ? <p className="text-sm text-muted-foreground">{election.description}</p> : null}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="capitalize">{formatStatus(election.status)}</Badge>
-                    <Badge variant="outline">{election.positions.length} position{election.positions.length === 1 ? "" : "s"}</Badge>
-                    <Badge variant="outline">{election.turnout} votes cast</Badge>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/dashboard/elections/${election.id}`}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View
-                    </Link>
-                  </Button>
-                  {election.status === "DRAFT" ? (
-                    <>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`/dashboard/elections/${election.id}/edit`}>Edit</Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => runAction(`submit-${election.id}`, () => submitElectionForApprovalAction(election.id), "Election submitted for approval")}
-                        disabled={busyAction === `submit-${election.id}`}
-                      >
-                        <Send className="mr-2 h-4 w-4" />
-                        Submit
-                      </Button>
-                    </>
-                  ) : null}
-                  {permissions.isAdmin && election.status === "PENDING_APPROVAL" ? (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={() => runAction(`approve-${election.id}`, () => approveElectionAction(election.id), "Election approved")}
-                        disabled={busyAction === `approve-${election.id}`}
-                      >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const reason = window.prompt("Reason for rejection", "Needs updated candidate list");
-                          if (!reason) return;
-                          runAction(`reject-${election.id}`, () => rejectElectionAction(election.id, reason), "Election returned to draft");
-                        }}
-                        disabled={busyAction === `reject-${election.id}`}
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Reject
-                      </Button>
-                    </>
-                  ) : null}
-                  {permissions.isAdmin && election.status === "APPROVED" ? (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={() => runAction(`activate-${election.id}`, () => activateElectionAction(election.id), "Election activated")}
-                        disabled={busyAction === `activate-${election.id}`}
-                      >
-                        <Play className="mr-2 h-4 w-4" />
-                        Activate
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => runAction(`close-${election.id}`, () => closeElectionAction(election.id), "Election closed")}
-                        disabled={busyAction === `close-${election.id}`}
-                      >
-                        <Square className="mr-2 h-4 w-4" />
-                        Close
-                      </Button>
-                    </>
-                  ) : null}
-                  {permissions.isAdmin && election.status === "ACTIVE" ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => runAction(`close-${election.id}`, () => closeElectionAction(election.id), "Election closed")}
-                      disabled={busyAction === `close-${election.id}`}
-                    >
-                      <Square className="mr-2 h-4 w-4" />
-                      Close
-                    </Button>
-                  ) : null}
-                  {permissions.isAdmin && ["CLOSED", "RESULTS_PUBLISHED"].includes(election.status) ? (
-                    <>
-                      {election.status === "CLOSED" ? (
-                        <Button
-                          size="sm"
-                          onClick={() => runAction(`publish-${election.id}`, () => publishElectionResultsAction(election.id), "Election results published")}
-                          disabled={busyAction === `publish-${election.id}`}
-                        >
-                          Publish Results
-                        </Button>
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => runAction(`archive-${election.id}`, () => archiveElectionAction(election.id), "Election archived")}
-                        disabled={busyAction === `archive-${election.id}`}
-                      >
-                        <Archive className="mr-2 h-4 w-4" />
-                        Archive
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 text-sm md:grid-cols-4">
-                <div>
-                  <p className="font-medium">Start</p>
-                  <p className="text-muted-foreground">{format(new Date(election.startAt), "MMM dd, yyyy h:mm a")}</p>
-                </div>
-                <div>
-                  <p className="font-medium">End</p>
-                  <p className="text-muted-foreground">{format(new Date(election.endAt), "MMM dd, yyyy h:mm a")}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Turnout</p>
-                  <p className="text-muted-foreground">{election.turnoutRate.toFixed(1)}%</p>
-                </div>
-                <div>
-                  <p className="font-medium">Visibility</p>
-                  <p className="text-muted-foreground">{election.resultVisibility === "AFTER_CLOSE" ? "After close" : "After manual publish"}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))
+        <Tabs defaultValue="active" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="active">Active List ({activeElections.length})</TabsTrigger>
+            <TabsTrigger value="archived">Archived ({archivedElections.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active" className="space-y-4">
+            {activeElections.length > 0 ? (
+              activeElections.map(renderElectionCard)
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  No non-archived elections right now.
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="archived" className="space-y-4">
+            {archivedElections.length > 0 ? (
+              archivedElections.map(renderElectionCard)
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  No archived elections yet.
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

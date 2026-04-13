@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getElectionUrl } from "@/lib/election-url";
 import { AccessRoles } from "@/lib/role";
 
 function formatStatus(status: string) {
@@ -226,7 +227,7 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
           </Button>
         </div>
         <Button asChild variant="outline">
-          <Link href="/elections">Open Student Voting View</Link>
+          <Link href={getElectionUrl("/elections")}>Open Student Voting View</Link>
         </Button>
       </div>
 

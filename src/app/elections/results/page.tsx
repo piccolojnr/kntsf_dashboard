@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, BarChart3, Trophy } from "lucide-react";
 import { PublicElectionResultsListClient } from "./client";
 import { Button } from "@/components/ui/button";
+import { getElectionUrl } from "@/lib/election-url";
 
 export default function PublicElectionResultsPage() {
   return (
@@ -29,7 +30,7 @@ export default function PublicElectionResultsPage() {
             <p>Only elections whose results are available to students appear here.</p>
             <p>Approval-vote positions show clear approved or appointment-required outcomes alongside yes and no totals.</p>
             <Button asChild variant="secondary" className="mt-2 w-fit">
-              <Link href="/elections">
+              <Link href={getElectionUrl("/elections")}>
                 Return to Active Elections
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

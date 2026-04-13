@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { getPublicElectionResultsListAction } from "@/app/actions/election.actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getElectionUrl } from "@/lib/election-url";
 
 export function PublicElectionResultsListClient() {
   const [elections, setElections] = useState<any[]>([]);
@@ -63,7 +64,7 @@ export function PublicElectionResultsListClient() {
                 </div>
               </div>
               <Button asChild>
-                <Link href={`/elections/${election.id}/results`}>
+                <Link href={getElectionUrl(`/elections/${election.id}/results`)}>
                   View Results
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

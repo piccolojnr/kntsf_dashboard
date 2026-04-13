@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { getActiveElectionsForVotingAction } from "@/app/actions/election.actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getElectionUrl } from "@/lib/election-url";
 
 export function ElectionsVotingClient() {
   const [elections, setElections] = useState<any[]>([]);
@@ -62,7 +63,7 @@ export function ElectionsVotingClient() {
                 </div>
               </div>
               <Button asChild>
-                <Link href={`/elections/${election.id}`}>
+                <Link href={getElectionUrl(`/elections/${election.id}`)}>
                   Open Ballot
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getElectionBallotAction } from "@/app/actions/election.actions";
 import { ElectionBallot } from "@/components/app/election/election-ballot";
 import { Button } from "@/components/ui/button";
+import { getElectionUrl } from "@/lib/election-url";
 
 interface ElectionBallotClientProps {
   electionId: number;
@@ -39,7 +40,7 @@ export function ElectionBallotClient({ electionId }: ElectionBallotClientProps) 
   return (
     <div className="space-y-6">
       <Button asChild variant="outline">
-        <Link href="/elections">
+        <Link href={getElectionUrl("/elections")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Elections
         </Link>

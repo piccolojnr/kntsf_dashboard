@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Trophy, Vote } from "lucide-react";
 import { ElectionsVotingClient } from "./client";
 import { Button } from "@/components/ui/button";
+import { getElectionUrl } from "@/lib/election-url";
 
 export default function ElectionsVotingPage() {
   return (
@@ -29,7 +30,7 @@ export default function ElectionsVotingPage() {
             <p>Candidate photos and profile summaries are shown directly on the ballot for easier comparison.</p>
             <p>Single-candidate positions use approve or reject voting. If rejected, the committee appoints a replacement.</p>
             <Button asChild variant="secondary" className="mt-2 w-fit">
-              <Link href="/elections/results">
+              <Link href={getElectionUrl("/elections/results")}>
                 View Published Results
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -39,7 +40,7 @@ export default function ElectionsVotingPage() {
       </section>
       <div className="flex justify-end">
         <Button asChild variant="outline">
-          <Link href="/elections/results">View Published Results</Link>
+          <Link href={getElectionUrl("/elections/results")}>View Published Results</Link>
         </Button>
       </div>
       <Suspense fallback={<div>Loading elections...</div>}>

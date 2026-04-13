@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getElectionResultsAction } from "@/app/actions/election.actions";
 import { ElectionResults } from "@/components/app/election/election-results";
 import { Button } from "@/components/ui/button";
+import { getElectionUrl } from "@/lib/election-url";
 
 interface PublicElectionResultsClientProps {
   electionId: number;
@@ -42,7 +43,7 @@ export function PublicElectionResultsClient({ electionId }: PublicElectionResult
         <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-end">
           <div className="space-y-4">
             <Button asChild variant="secondary" className="w-fit">
-              <Link href="/elections/results">
+              <Link href={getElectionUrl("/elections/results")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Results
               </Link>

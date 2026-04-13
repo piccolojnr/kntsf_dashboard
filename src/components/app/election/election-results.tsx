@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { Award, BarChart3, Calendar, Users } from "lucide-react";
+import { AlertTriangle, Award, BarChart3, Calendar, CheckCircle2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -66,6 +66,73 @@ export function ElectionResults({ election }: ElectionResultsProps) {
       </Card>
 
       {election.positions.map((position: any) => {
+        if (position.votingMode === "CANDIDATE_APPROVAL") {
+          const candidate = position.candidates[0];
+          const yesCount = position.approvalStats?.yesCount || 0;
+          const noCount = position.approvalStats?.noCount || 0;
+          const totalVotes = position.approvalStats?.totalVotes || 0;
+          const approved = yesCount > noCount;
+          const yesPercentage = totalVotes > 0 ? (yesCount / totalVotes) * 100 : 0;
+          const noPercentage = totalVotes > 0 ? (noCount / totalVotes) * 100 : 0;
+
+          return (
+            <Card key={position.id}>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5" />
+                    {position.title}
+                  </CardTitle>
+                  <Badge variant="outline">Approval Vote</Badge>
+                  <Badge variant={approved ? "secondary" : "destructive"}>
+                    {position.outcomeStatus === "ELECTED" ? "Approved" : position.outcomeStatus === "APPOINTMENT_REQUIRED" ? "Committee Appointment Required" : "Pending"}
+                  </Badge>
+                </div>
+                {position.description ? <p className="text-sm text-muted-foreground">{position.description}</p> : null}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {candidate ? (
+                  <div className="rounded-lg border p-4">
+                    <p className="font-medium">{candidate.student.name || candidate.student.studentId}</p>
+                    <p className="text-sm text-muted-foreground">{candidate.student.studentId}</p>
+                  </div>
+                ) : null}
+                {position.approvalNotice ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    {position.approvalNotice}
+                  </div>
+                ) : null}
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-medium">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Yes / Approve
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {yesCount} ({yesPercentage.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <Progress value={yesPercentage} className="h-2" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-medium">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        No / Reject
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {noCount} ({noPercentage.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <Progress value={noPercentage} className="h-2" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        }
+
         const totalVotes = position.candidates.reduce((sum: number, candidate: any) => sum + candidate.voteCount, 0);
         const sortedCandidates = [...position.candidates].sort((left: any, right: any) => right.voteCount - left.voteCount);
         return (

@@ -3,6 +3,9 @@
 import prisma from "@/lib/prisma/client";
 import { z } from "zod";
 
+const DEFAULT_APPROVAL_NOTICE =
+  "This position has one candidate. You are voting to approve or reject the candidate. If rejected, the committee will appoint someone to fill the role.";
+
 const candidateSchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),
   bio: z.string().optional(),
@@ -30,10 +33,15 @@ const updateElectionSchema = createElectionSchema.partial().extend({
   id: z.number(),
 });
 
-const ballotChoiceSchema = z.object({
-  positionId: z.number(),
-  candidateId: z.number(),
-});
+const ballotChoiceSchema = z
+  .object({
+    positionId: z.number(),
+    candidateId: z.number().optional(),
+    approvalDecision: z.enum(["APPROVE", "REJECT"]).optional(),
+  })
+  .refine((value) => value.candidateId || value.approvalDecision, {
+    message: "Each ballot choice requires a candidate selection or approval decision",
+  });
 
 const submitBallotSchema = z.object({
   electionId: z.number(),
@@ -93,6 +101,7 @@ const electionInclude = {
           choices: {
             select: {
               id: true,
+              approvalDecision: true,
             },
           },
         },
@@ -150,6 +159,14 @@ function canViewResults(status: string, resultVisibility: string, publishedAt: D
   return Boolean(publishedAt);
 }
 
+function getVotingMode(candidateCount: number) {
+  return candidateCount === 1 ? "CANDIDATE_APPROVAL" : "CANDIDATE_SELECTION";
+}
+
+function getApprovalNotice(candidateCount: number) {
+  return candidateCount === 1 ? DEFAULT_APPROVAL_NOTICE : null;
+}
+
 async function serializeElection(election: any) {
   const totalEligibleVoters = await prisma.student.count({
     where: { deletedAt: null },
@@ -161,14 +178,90 @@ async function serializeElection(election: any) {
     totalEligibleVoters,
     turnout,
     turnoutRate: totalEligibleVoters > 0 ? (turnout / totalEligibleVoters) * 100 : 0,
-    positions: election.positions.map((position: any) => ({
-      ...position,
-      candidates: position.candidates.map((candidate: any) => ({
-        ...candidate,
-        voteCount: candidate.choices.length,
-      })),
-    })),
+    positions: election.positions.map((position: any) => {
+      if (position.votingMode === "CANDIDATE_APPROVAL") {
+        const candidate = position.candidates[0] ?? null;
+        const yesCount = candidate
+          ? candidate.choices.filter((choice: any) => choice.approvalDecision === "APPROVE").length
+          : 0;
+        const noCount = candidate
+          ? candidate.choices.filter((choice: any) => choice.approvalDecision === "REJECT").length
+          : 0;
+
+        return {
+          ...position,
+          approvalStats: {
+            yesCount,
+            noCount,
+            totalVotes: yesCount + noCount,
+          },
+          candidates: position.candidates.map((candidate: any) => ({
+            ...candidate,
+            voteCount: candidate.choices.length,
+            yesCount: candidate.choices.filter((choice: any) => choice.approvalDecision === "APPROVE").length,
+            noCount: candidate.choices.filter((choice: any) => choice.approvalDecision === "REJECT").length,
+          })),
+        };
+      }
+
+      return {
+        ...position,
+        candidates: position.candidates.map((candidate: any) => ({
+          ...candidate,
+          voteCount: candidate.choices.length,
+        })),
+      };
+    }),
   };
+}
+
+async function syncPositionOutcomes(electionId: number) {
+  const positions = await prisma.electionPosition.findMany({
+    where: { electionId },
+    include: {
+      candidates: {
+        where: { status: "APPROVED" },
+        include: {
+          choices: {
+            select: {
+              id: true,
+              approvalDecision: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  await prisma.$transaction(
+    positions.map((position) => {
+      let outcomeStatus: "PENDING" | "ELECTED" | "APPOINTMENT_REQUIRED" = "PENDING";
+
+      if (position.votingMode === "CANDIDATE_APPROVAL") {
+        const candidate = position.candidates[0];
+        if (candidate) {
+          const yesCount = candidate.choices.filter((choice) => choice.approvalDecision === "APPROVE").length;
+          const noCount = candidate.choices.filter((choice) => choice.approvalDecision === "REJECT").length;
+          if (yesCount > 0 || noCount > 0) {
+            outcomeStatus = yesCount > noCount ? "ELECTED" : "APPOINTMENT_REQUIRED";
+          }
+        }
+      } else {
+        const winningCandidate = position.candidates.reduce(
+          (best, candidate) => (candidate.choices.length > best.choices.length ? candidate : best),
+          position.candidates[0]
+        );
+        if (winningCandidate && winningCandidate.choices.length > 0) {
+          outcomeStatus = "ELECTED";
+        }
+      }
+
+      return prisma.electionPosition.update({
+        where: { id: position.id },
+        data: { outcomeStatus },
+      });
+    })
+  );
 }
 
 export async function createElection(data: CreateElectionData, createdById: number) {
@@ -190,6 +283,8 @@ export async function createElection(data: CreateElectionData, createdById: numb
           description: position.description,
           sortOrder: index,
           seatCount: position.seatCount,
+          votingMode: getVotingMode(position.candidates.length),
+          approvalNotice: getApprovalNotice(position.candidates.length),
           candidates: {
             create: position.candidates.map((candidate) => ({
               studentId: candidateStudentMap.get(candidate.studentId.trim())!,
@@ -256,6 +351,8 @@ export async function updateElection(id: number, data: Partial<CreateElectionDat
                   description: position.description,
                   sortOrder: index,
                   seatCount: position.seatCount,
+                  votingMode: getVotingMode(position.candidates.length),
+                  approvalNotice: getApprovalNotice(position.candidates.length),
                   candidates: {
                     create: position.candidates.map((candidate) => ({
                       studentId: candidateStudentMap!.get(candidate.studentId.trim())!,
@@ -393,7 +490,9 @@ export async function closeElection(id: number) {
   if (!["ACTIVE", "APPROVED"].includes(election.status)) {
     throw new Error("Only approved or active elections can be closed");
   }
-  return updateElectionStatus(id, "CLOSED");
+  await updateElectionStatus(id, "CLOSED");
+  await syncPositionOutcomes(id);
+  return getElectionById(id);
 }
 
 export async function publishElectionResults(id: number) {
@@ -405,9 +504,11 @@ export async function publishElectionResults(id: number) {
   if (!["CLOSED", "RESULTS_PUBLISHED"].includes(election.status)) {
     throw new Error("Results can only be published for closed elections");
   }
-  return updateElectionStatus(id, "RESULTS_PUBLISHED", {
+  await updateElectionStatus(id, "RESULTS_PUBLISHED", {
     publishedAt: new Date(),
   });
+  await syncPositionOutcomes(id);
+  return getElectionById(id);
 }
 
 export async function archiveElection(id: number) {
@@ -570,13 +671,27 @@ export async function submitElectionBallot(data: SubmitElectionBallotData) {
   const positionMap = new Map(
     election.positions.map((position) => [
       position.id,
-      new Set(position.candidates.map((candidate) => candidate.id)),
+      {
+        votingMode: position.votingMode,
+        candidateIds: new Set(position.candidates.map((candidate) => candidate.id)),
+      },
     ])
   );
 
   for (const choice of validated.choices) {
-    const candidateIds = positionMap.get(choice.positionId);
-    if (!candidateIds || !candidateIds.has(choice.candidateId)) {
+    const positionDetails = positionMap.get(choice.positionId);
+    if (!positionDetails) {
+      throw new Error("Invalid position selection");
+    }
+
+    if (positionDetails.votingMode === "CANDIDATE_APPROVAL") {
+      if (!choice.approvalDecision) {
+        throw new Error("Approval-vote positions require an approve or reject decision");
+      }
+      if (positionDetails.candidateIds.size !== 1) {
+        throw new Error("Approval-vote positions must have exactly one candidate");
+      }
+    } else if (!choice.candidateId || !positionDetails.candidateIds.has(choice.candidateId)) {
       throw new Error("Invalid candidate selection");
     }
   }
@@ -601,7 +716,10 @@ export async function submitElectionBallot(data: SubmitElectionBallotData) {
         choices: {
           create: validated.choices.map((choice) => ({
             positionId: choice.positionId,
-            candidateId: choice.candidateId,
+            candidateId:
+              choice.candidateId ??
+              election.positions.find((position) => position.id === choice.positionId)?.candidates[0]?.id,
+            approvalDecision: choice.approvalDecision,
           })),
         },
       },
@@ -634,6 +752,11 @@ export async function getElectionResults(id: number, includeHidden = false) {
   const visible = canViewResults(election.status, election.resultVisibility, election.publishedAt);
   if (!visible && !includeHidden) {
     throw new Error("Results are not available yet");
+  }
+
+  if (["CLOSED", "RESULTS_PUBLISHED"].includes(election.status)) {
+    await syncPositionOutcomes(id);
+    return getElectionById(id);
   }
 
   return serializeElection(election);

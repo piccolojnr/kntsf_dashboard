@@ -426,6 +426,9 @@ model ElectionPosition {
   description String?                @db.Text
   sortOrder   Int                    @default(0)
   seatCount   Int                    @default(1)
+  votingMode  PositionVotingMode     @default(CANDIDATE_SELECTION)
+  approvalNotice String?             @db.Text
+  outcomeStatus PositionOutcomeStatus @default(PENDING)
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
   election    Election               @relation(fields: [electionId], references: [id], onDelete: Cascade)
@@ -479,13 +482,14 @@ model ElectionBallot {
 }
 
 model ElectionBallotChoice {
-  id          Int               @id @default(autoincrement())
-  ballotId    Int
-  positionId  Int
-  candidateId Int
-  ballot      ElectionBallot    @relation(fields: [ballotId], references: [id], onDelete: Cascade)
-  candidate   ElectionCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  position    ElectionPosition  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  id               Int               @id @default(autoincrement())
+  ballotId         Int
+  positionId       Int
+  candidateId      Int?
+  approvalDecision ApprovalDecision?
+  ballot           ElectionBallot    @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  candidate        ElectionCandidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  position         ElectionPosition  @relation(fields: [positionId], references: [id], onDelete: Cascade)
 
   @@unique([ballotId, positionId])
   @@index([ballotId])
@@ -564,6 +568,22 @@ enum ElectionResultVisibility {
 enum CandidateStatus {
   APPROVED
   WITHDRAWN
+}
+
+enum PositionVotingMode {
+  CANDIDATE_SELECTION
+  CANDIDATE_APPROVAL
+}
+
+enum ApprovalDecision {
+  APPROVE
+  REJECT
+}
+
+enum PositionOutcomeStatus {
+  PENDING
+  ELECTED
+  APPOINTMENT_REQUIRED
 }
 
 model Souvenir {

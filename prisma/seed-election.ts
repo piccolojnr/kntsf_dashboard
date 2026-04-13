@@ -53,28 +53,29 @@ async function main() {
     where: { id: DEMO_ELECTION_ID },
     update: {
       title: 'SRC General Election Demo',
-      description: 'Sample multi-position election seeded for local development and UX testing.',
+      description: 'Sample multi-position election seeded for local development and UX testing, including a single-candidate approval vote.',
       startAt: new Date('2026-04-10T09:00:00.000Z'),
       endAt: new Date('2026-04-20T17:00:00.000Z'),
-      status: 'APPROVED',
-      resultVisibility: 'AFTER_PUBLISH',
+      status: 'RESULTS_PUBLISHED',
+      resultVisibility: 'AFTER_CLOSE',
       createdById: adminUser.id,
       approvedById: adminUser.id,
       approvedAt: new Date('2026-04-09T12:00:00.000Z'),
-      publishedAt: null,
+      publishedAt: new Date('2026-04-21T12:00:00.000Z'),
       rejectionReason: null,
     },
     create: {
       id: DEMO_ELECTION_ID,
       title: 'SRC General Election Demo',
-      description: 'Sample multi-position election seeded for local development and UX testing.',
+      description: 'Sample multi-position election seeded for local development and UX testing, including a single-candidate approval vote.',
       startAt: new Date('2026-04-10T09:00:00.000Z'),
       endAt: new Date('2026-04-20T17:00:00.000Z'),
-      status: 'APPROVED',
-      resultVisibility: 'AFTER_PUBLISH',
+      status: 'RESULTS_PUBLISHED',
+      resultVisibility: 'AFTER_CLOSE',
       createdById: adminUser.id,
       approvedById: adminUser.id,
       approvedAt: new Date('2026-04-09T12:00:00.000Z'),
+      publishedAt: new Date('2026-04-21T12:00:00.000Z'),
     },
   });
 
@@ -102,7 +103,7 @@ async function main() {
     where: { electionId: DEMO_ELECTION_ID },
   });
 
-  await prisma.electionPosition.create({
+  const presidentPosition = await prisma.electionPosition.create({
     data: {
       electionId: DEMO_ELECTION_ID,
       title: 'President',
@@ -124,9 +125,12 @@ async function main() {
         ],
       },
     },
+    include: {
+      candidates: true,
+    },
   });
 
-  await prisma.electionPosition.create({
+  const secretaryPosition = await prisma.electionPosition.create({
     data: {
       electionId: DEMO_ELECTION_ID,
       title: 'General Secretary',
@@ -148,15 +152,22 @@ async function main() {
         ],
       },
     },
+    include: {
+      candidates: true,
+    },
   });
 
-  await prisma.electionPosition.create({
+  const treasurerPosition = await prisma.electionPosition.create({
     data: {
       electionId: DEMO_ELECTION_ID,
       title: 'Treasurer',
       description: 'Oversees SRC finances and spending transparency.',
       sortOrder: 2,
       seatCount: 1,
+      votingMode: 'CANDIDATE_APPROVAL',
+      approvalNotice:
+        'This position has one candidate. You are voting to approve or reject the candidate. If rejected, the committee will appoint someone to fill the role.',
+      outcomeStatus: 'APPOINTMENT_REQUIRED',
       candidates: {
         create: [
           {
@@ -164,15 +175,72 @@ async function main() {
             bio: 'Finance-focused leader with interest in budgeting discipline.',
             manifesto: 'Publish clearer spending reports and budget summaries.',
           },
-          {
-            studentId: studentMap.get('KUC/EL/006')!,
-            bio: 'Interested in accountable resource management.',
-            manifesto: 'Improve financial planning and student visibility into SRC spending.',
-          },
         ],
       },
     },
+    include: {
+      candidates: true,
+    },
   });
+
+  const presidentAmaCandidate = presidentPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/001')!);
+  const presidentKojoCandidate = presidentPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/002')!);
+  const secretaryEfuaCandidate = secretaryPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/003')!);
+  const secretaryYawCandidate = secretaryPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/004')!);
+  const treasurerAkosuaCandidate = treasurerPosition.candidates.find((candidate) => candidate.studentId === studentMap.get('KUC/EL/005')!);
+
+  if (!presidentAmaCandidate || !presidentKojoCandidate || !secretaryEfuaCandidate || !secretaryYawCandidate || !treasurerAkosuaCandidate) {
+    throw new Error('Failed to resolve seeded election candidates');
+  }
+
+  const seededVoters = [
+    {
+      studentId: studentMap.get('KUC/EL/001')!,
+      choices: [
+        { positionId: presidentPosition.id, candidateId: presidentAmaCandidate.id },
+        { positionId: secretaryPosition.id, candidateId: secretaryEfuaCandidate.id },
+        { positionId: treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'APPROVE' as const },
+      ],
+    },
+    {
+      studentId: studentMap.get('KUC/EL/002')!,
+      choices: [
+        { positionId: presidentPosition.id, candidateId: presidentKojoCandidate.id },
+        { positionId: secretaryPosition.id, candidateId: secretaryYawCandidate.id },
+        { positionId: treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'REJECT' as const },
+      ],
+    },
+    {
+      studentId: studentMap.get('KUC/EL/006')!,
+      choices: [
+        { positionId: presidentPosition.id, candidateId: presidentAmaCandidate.id },
+        { positionId: secretaryPosition.id, candidateId: secretaryEfuaCandidate.id },
+        { positionId: treasurerPosition.id, candidateId: treasurerAkosuaCandidate.id, approvalDecision: 'REJECT' as const },
+      ],
+    },
+  ];
+
+  for (const voter of seededVoters) {
+    await prisma.electionBallot.create({
+      data: {
+        electionId: DEMO_ELECTION_ID,
+        choices: {
+          create: voter.choices.map((choice) => ({
+            positionId: choice.positionId,
+            candidateId: choice.candidateId,
+            approvalDecision: choice.approvalDecision,
+          })),
+        },
+      },
+    });
+
+    await prisma.electionParticipation.create({
+      data: {
+        electionId: DEMO_ELECTION_ID,
+        studentId: voter.studentId,
+      },
+    });
+  }
 
   console.log(`Demo election seeded with id ${DEMO_ELECTION_ID}.`);
 }

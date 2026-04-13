@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/auth";
 import { getRole } from "@/lib/role";
 import services from "@/lib/services";
+import cloudinary from "@/lib/cloudinary";
 import {
   CreateElectionData,
   SubmitElectionBallotData,
@@ -246,5 +247,63 @@ export async function getElectionResultsAction(id: number, includeHidden = false
     return { success: true, data: election };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Failed to fetch election results" };
+  }
+}
+
+export async function searchElectionStudentsAction(query: string) {
+  try {
+    await requireElectionManager();
+    const normalizedQuery = query.trim();
+    if (normalizedQuery.length < 2) {
+      return { success: true, data: [] };
+    }
+
+    const result = await services.student.searchStudent(normalizedQuery);
+    if (!result.success) {
+      throw new Error(result.error || "Failed to search students");
+    }
+
+    const students = (result.data || []).slice(0, 8).map((student: any) => ({
+      id: student.id,
+      studentId: student.studentId,
+      name: student.name || "",
+      email: student.email || "",
+      course: student.course || "",
+      level: student.level || "",
+    }));
+
+    return { success: true, data: students };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Failed to search students" };
+  }
+}
+
+export async function uploadElectionCandidateImageAction(formData: FormData) {
+  try {
+    await requireElectionManager();
+
+    const file = formData.get("image") as File | null;
+    if (!file) {
+      throw new Error("No image uploaded");
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadResult = await new Promise<any>((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: "election_candidates",
+          public_id: `candidate_${Date.now()}`,
+          overwrite: false,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      ).end(buffer);
+    });
+
+    return { success: true, data: { url: uploadResult.secure_url } };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Failed to upload candidate image" };
   }
 }

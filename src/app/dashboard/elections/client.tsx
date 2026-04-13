@@ -15,8 +15,6 @@ import {
   rejectElectionAction,
   submitElectionForApprovalAction,
 } from "@/app/actions/election.actions";
-import { CreateElectionDialog } from "@/components/app/election/create-election-dialog";
-import { EditElectionDialog } from "@/components/app/election/edit-election-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,9 +31,6 @@ interface ElectionsClientProps {
 export function ElectionsClient({ permissions }: ElectionsClientProps) {
   const [elections, setElections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingElection, setEditingElection] = useState<any | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const fetchElections = async () => {
@@ -75,9 +70,11 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex gap-2">
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button asChild>
+            <Link href="/dashboard/elections/new">
             <Plus className="mr-2 h-4 w-4" />
             Create Election
+            </Link>
           </Button>
           <Button variant="outline" onClick={fetchElections}>
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -118,8 +115,8 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
                   </Button>
                   {election.status === "DRAFT" ? (
                     <>
-                      <Button size="sm" variant="outline" onClick={() => { setEditingElection(election); setEditOpen(true); }}>
-                        Edit
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/dashboard/elections/${election.id}/edit`}>Edit</Link>
                       </Button>
                       <Button
                         size="sm"
@@ -234,18 +231,6 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
           </Card>
         ))
       )}
-
-      <CreateElectionDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={() => { setCreateOpen(false); fetchElections(); }} />
-      <EditElectionDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        election={editingElection}
-        onSuccess={() => {
-          setEditOpen(false);
-          setEditingElection(null);
-          fetchElections();
-        }}
-      />
     </div>
   );
 }

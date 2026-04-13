@@ -12,7 +12,9 @@
     "prisma:format": "prisma format",
     "prisma:migrate": "prisma migrate dev --create-only",
     "prisma:reset": "prisma migrate reset --force --skip-seed",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed:election": "tsx prisma/seed-election.ts",
+    "prisma:seed:election:undo": "tsx prisma/undo-seed-election.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",

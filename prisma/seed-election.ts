@@ -91,7 +91,7 @@ async function createElectionSkeleton({
 }: {
   id: number;
   title: string;
-  description: string;
+  description?: string;
   startAt: Date;
   endAt: Date;
   status: ElectionStatus;
@@ -146,14 +146,14 @@ async function createElectionPositions(electionId: number, studentMap: Map<strin
         create: [
           {
             studentId: studentMap.get('KUC/EL/001')!,
-            bio: 'Focused on student welfare and transparent leadership.',
-            manifesto: 'Improve communication, academic support, and student services.',
+            // bio: 'Focused on student welfare and transparent leadership.',
+            // manifesto: 'Improve communication, academic support, and student services.',
           },
-          {
-            studentId: studentMap.get('KUC/EL/002')!,
-            bio: 'Technology-minded candidate for stronger student engagement.',
-            manifesto: 'Digitize SRC services and improve accountability across committees.',
-          },
+          // {
+          //   studentId: studentMap.get('KUC/EL/002')!,
+          //   // bio: 'Technology-minded candidate for stronger student engagement.',
+          //   // manifesto: 'Digitize SRC services and improve accountability across committees.',
+          // },
         ],
       },
     },
@@ -172,14 +172,14 @@ async function createElectionPositions(electionId: number, studentMap: Map<strin
         create: [
           {
             studentId: studentMap.get('KUC/EL/003')!,
-            bio: 'Strong administrative background with attention to detail.',
-            manifesto: 'Improve meeting documentation and student-facing notices.',
+            // bio: 'Strong administrative background with attention to detail.',
+            // manifesto: 'Improve meeting documentation and student-facing notices.',
           },
-          {
-            studentId: studentMap.get('KUC/EL/004')!,
-            bio: 'Interested in making SRC operations easier to follow.',
-            manifesto: 'Create clearer updates and more reliable communication channels.',
-          },
+          // {
+          //   studentId: studentMap.get('KUC/EL/004')!,
+          //   bio: 'Interested in making SRC operations easier to follow.',
+          //   manifesto: 'Create clearer updates and more reliable communication channels.',
+          // },
         ],
       },
     },
@@ -200,8 +200,8 @@ async function createElectionPositions(electionId: number, studentMap: Map<strin
         create: [
           {
             studentId: studentMap.get('KUC/EL/005')!,
-            bio: 'Finance-focused leader with interest in budgeting discipline.',
-            manifesto: 'Publish clearer spending reports and budget summaries.',
+            // bio: 'Finance-focused leader with interest in budgeting discipline.',
+            // manifesto: 'Publish clearer spending reports and budget summaries.',
           },
         ],
       },
@@ -308,7 +308,7 @@ async function main() {
     {
       id: DEMO_ELECTION_IDS.draft,
       title: 'Draft SRC Election Demo',
-      description: 'Draft election prepared for internal editing and candidate updates.',
+      // description: 'Draft election prepared for internal editing and candidate updates.',
       startAt: daysFromNow(14, 9),
       endAt: daysFromNow(16, 17),
       status: 'DRAFT' as const,

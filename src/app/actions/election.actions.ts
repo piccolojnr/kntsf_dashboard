@@ -99,6 +99,15 @@ export async function getElectionByIdAction(id: number) {
   }
 }
 
+export async function getPublicElectionByIdAction(id: number) {
+  try {
+    const election = await services.election.getElectionById(id);
+    return { success: true, data: election };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch election" };
+  }
+}
+
 export async function submitElectionForApprovalAction(id: number) {
   try {
     const user = await requireElectionManager();

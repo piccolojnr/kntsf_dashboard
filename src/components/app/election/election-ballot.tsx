@@ -123,7 +123,9 @@ export function ElectionBallot({ election }: ElectionBallotProps) {
               <AlertDescription>
                 Choose one option for each position. For single-candidate
                 positions, you are voting to approve or reject the candidate.
-                Ballots are anonymous after submission.
+                If rejected, the position may be left vacant or filled through
+                a separate process if necessary. Ballots are anonymous after
+                submission.
               </AlertDescription>
             </Alert>
           )}
@@ -233,8 +235,8 @@ export function ElectionBallot({ election }: ElectionBallotProps) {
                           Reject Candidate
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          If rejected, the committee will appoint someone to
-                          fill the role.
+                          If rejected, the position may be left vacant or filled
+                          through a separate process if necessary.
                         </p>
                       </div>
                     </label>

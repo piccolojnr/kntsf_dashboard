@@ -28,7 +28,7 @@ export default function PublicElectionResultsPage() {
               Public release
             </div>
             <p>Only elections whose results are available to students appear here.</p>
-            <p>Approval-vote positions show clear approved or appointment-required outcomes alongside yes and no totals.</p>
+            <p>Approval-vote positions show approved, vacant, or separately filled outcomes alongside yes and no totals.</p>
             <Button asChild variant="secondary" className="mt-2 w-fit">
               <Link href={getElectionUrl("/elections")}>
                 Return to Active Elections

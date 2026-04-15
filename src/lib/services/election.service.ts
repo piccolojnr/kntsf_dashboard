@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma/client";
 import { z } from "zod";
 
 const DEFAULT_APPROVAL_NOTICE =
-  "This position has one candidate. You are voting to approve or reject the candidate. If rejected, the committee will appoint someone to fill the role.";
+  "This position has one candidate. You are voting to approve or reject the candidate. If rejected, the position may be left vacant or filled through a separate process if necessary.";
 
 const candidateSchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),

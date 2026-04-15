@@ -28,7 +28,7 @@ export default function ElectionsVotingPage() {
               Before you vote
             </div>
             <p>Candidate photos and profile summaries are shown directly on the ballot for easier comparison.</p>
-            <p>Single-candidate positions use approve or reject voting. If rejected, the committee appoints a replacement.</p>
+            <p>Single-candidate positions use approve or reject voting. If rejected, the position may be left vacant or filled through a separate process if necessary.</p>
             <Button asChild variant="secondary" className="mt-2 w-fit">
               <Link href={getElectionUrl("/elections/results")}>
                 View Published Results

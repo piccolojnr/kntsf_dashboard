@@ -63,6 +63,7 @@ type ElectionFormData = {
 interface ElectionFormProps {
   initialData?: {
     id: number;
+    status: string;
     title: string;
     description?: string | null;
     startAt: string;
@@ -127,6 +128,7 @@ function DateTimeField({
   date,
   time,
   minDate,
+  disabled,
   onDateChange,
   onTimeChange,
 }: {
@@ -134,6 +136,7 @@ function DateTimeField({
   date: Date | undefined;
   time: string;
   minDate?: Date;
+  disabled?: boolean;
   onDateChange: (value: Date | undefined) => void;
   onTimeChange: (value: string) => void;
 }) {
@@ -148,7 +151,11 @@ function DateTimeField({
         <Label>{label}</Label>
         <Popover modal={true}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("justify-between text-left font-normal", !date && "text-muted-foreground")}>
+            <Button
+              variant="outline"
+              disabled={disabled}
+              className={cn("justify-between text-left font-normal", !date && "text-muted-foreground")}
+            >
               {date ? format(date, "PPP") : "Pick a date"}
               <CalendarIcon className="h-4 w-4 opacity-50" />
             </Button>
@@ -166,7 +173,7 @@ function DateTimeField({
       </div>
       <div className="space-y-2">
         <Label>{label} Time</Label>
-        <Input type="time" value={time} onChange={(event) => onTimeChange(event.target.value)} />
+        <Input type="time" value={time} onChange={(event) => onTimeChange(event.target.value)} disabled={disabled} />
       </div>
     </div>
   );
@@ -177,13 +184,19 @@ function CandidateSelector({
   onChange,
   onRemove,
   canRemove,
+  allowStudentChange,
 }: {
   candidate: CandidateForm;
   onChange: (patch: Partial<CandidateForm>) => void;
   onRemove: () => void;
   canRemove: boolean;
+  allowStudentChange: boolean;
 }) {
   useEffect(() => {
+    if (!allowStudentChange) {
+      return;
+    }
+
     if (candidate.student || candidate.searchQuery.trim().length < 2) {
       if (candidate.searchResults.length > 0 || candidate.isSearching) {
         onChange({ searchResults: [], isSearching: false });
@@ -203,7 +216,7 @@ function CandidateSelector({
 
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candidate.student, candidate.searchQuery]);
+  }, [allowStudentChange, candidate.student, candidate.searchQuery]);
 
   const selectStudent = (student: StudentSearchResult) => {
     onChange({
@@ -229,14 +242,28 @@ function CandidateSelector({
     <div className="space-y-4 rounded-lg border p-4">
       <div className="flex items-center justify-between">
         <p className="font-medium">Candidate</p>
-        {canRemove ? (
+        {canRemove && allowStudentChange ? (
           <Button type="button" size="icon" variant="ghost" onClick={onRemove}>
             <Trash2 className="h-4 w-4" />
           </Button>
         ) : null}
       </div>
 
-      {candidate.student ? (
+      {!allowStudentChange ? (
+        <div className="flex items-start justify-between rounded-md border bg-muted/30 p-3">
+          <div className="space-y-1">
+            <p className="font-medium">{candidate.student?.name || candidate.student?.studentId || "Candidate locked"}</p>
+            {candidate.student ? (
+              <>
+                <p className="text-sm text-muted-foreground">{candidate.student.studentId}</p>
+                <p className="text-xs text-muted-foreground">
+                  {[candidate.student.course, candidate.student.level].filter(Boolean).join(" • ")}
+                </p>
+              </>
+            ) : null}
+          </div>
+        </div>
+      ) : candidate.student ? (
         <div className="flex items-start justify-between rounded-md border bg-muted/30 p-3">
           <div className="space-y-1">
             <p className="font-medium">{candidate.student.name || candidate.student.studentId}</p>
@@ -329,6 +356,7 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = Boolean(initialData?.id);
+  const isActivatedEdit = initialData?.status === "ACTIVE";
 
   useEffect(() => {
     if (!initialData) return;
@@ -516,6 +544,11 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
           <p className="mt-2 text-muted-foreground">
             Build a structured SRC ballot with formal scheduling, candidate profiles, and approval-ready data.
           </p>
+          {isActivatedEdit ? (
+            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+              This election is active. You can update text and candidate images, but positions, candidate assignments, and schedule fields are locked.
+            </div>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={() => router.push("/dashboard/elections")}>
@@ -556,6 +589,7 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
               label="Start"
               date={form.startDate}
               time={form.startTime}
+              disabled={isActivatedEdit}
               onDateChange={(value) => setForm((current) => ({ ...current, startDate: value }))}
               onTimeChange={(value) => setForm((current) => ({ ...current, startTime: value }))}
             />
@@ -564,6 +598,7 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
               date={form.endDate}
               time={form.endTime}
               minDate={form.startDate}
+              disabled={isActivatedEdit}
               onDateChange={(value) => setForm((current) => ({ ...current, endDate: value }))}
               onTimeChange={(value) => setForm((current) => ({ ...current, endTime: value }))}
             />
@@ -571,11 +606,12 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
               <Label htmlFor="resultVisibility">Results Visibility</Label>
               <Select
                 value={form.resultVisibility}
+                disabled={isActivatedEdit}
                 onValueChange={(value: "AFTER_PUBLISH" | "AFTER_CLOSE") =>
                   setForm((current) => ({ ...current, resultVisibility: value }))
                 }
               >
-                <SelectTrigger id="resultVisibility">
+                <SelectTrigger id="resultVisibility" disabled={isActivatedEdit}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -597,10 +633,12 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
             <h2 className="text-xl font-semibold">Positions</h2>
             <p className="text-sm text-muted-foreground">Add offices and attach verified students as candidates.</p>
           </div>
-          <Button type="button" variant="outline" onClick={addPosition}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Position
-          </Button>
+          {!isActivatedEdit ? (
+            <Button type="button" variant="outline" onClick={addPosition}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Position
+            </Button>
+          ) : null}
         </div>
 
         {form.positions.map((position, positionIndex) => (
@@ -608,9 +646,11 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
               <div>
                 <CardTitle>{position.title.trim() || `Position ${positionIndex + 1}`}</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">{position.candidates.length} candidate{position.candidates.length === 1 ? "" : "s"}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {position.candidates.length} candidate{position.candidates.length === 1 ? "" : "s"}
+                </p>
               </div>
-              {form.positions.length > 1 ? (
+              {form.positions.length > 1 && !isActivatedEdit ? (
                 <Button type="button" size="icon" variant="ghost" onClick={() => removePosition(positionIndex)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -635,10 +675,12 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label>Candidates</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={() => addCandidate(positionIndex)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Candidate
-                  </Button>
+                  {!isActivatedEdit ? (
+                    <Button type="button" size="sm" variant="outline" onClick={() => addCandidate(positionIndex)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Candidate
+                    </Button>
+                  ) : null}
                 </div>
 
                 {position.candidates.map((candidate, candidateIndex) => (
@@ -648,6 +690,7 @@ export function ElectionForm({ initialData }: ElectionFormProps) {
                     onChange={(patch) => updateCandidate(positionIndex, candidateIndex, patch)}
                     onRemove={() => removeCandidate(positionIndex, candidateIndex)}
                     canRemove={position.candidates.length > 1}
+                    allowStudentChange={!isActivatedEdit}
                   />
                 ))}
               </div>

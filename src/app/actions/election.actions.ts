@@ -73,6 +73,7 @@ export async function updateElectionAction(id: number, data: Partial<CreateElect
     await logElectionAction(userId, "election.update", `Updated election "${election.title}" (#${election.id})`);
     revalidatePath("/dashboard/elections");
     revalidatePath(`/dashboard/elections/${id}`);
+    revalidatePath(`/dashboard/elections/${id}/edit`);
     return { success: true, data: election };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Failed to update election" };

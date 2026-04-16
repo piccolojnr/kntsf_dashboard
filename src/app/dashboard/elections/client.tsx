@@ -122,7 +122,7 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
                 View
               </Link>
             </Button>
-            {election.status === "DRAFT" ? (
+            {["DRAFT", "PENDING_APPROVAL", "APPROVED", "ACTIVE"].includes(election.status) ? (
               <>
                 <Button asChild size="sm" variant="outline">
                   <Link href={`/dashboard/elections/${election.id}/edit`}>

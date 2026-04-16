@@ -153,6 +153,62 @@ function ensureDraftStatus(status: string) {
   }
 }
 
+function ensureEditableStatus(status: string) {
+  if (!["DRAFT", "PENDING_APPROVAL", "APPROVED", "ACTIVE"].includes(status)) {
+    throw new Error("This election can no longer be edited");
+  }
+}
+
+function assertActiveElectionUpdateIsRestricted(
+  existingElection: any,
+  incomingElection: CreateElectionData | Partial<CreateElectionData>,
+) {
+  if (incomingElection.startAt && incomingElection.startAt.getTime() !== existingElection.startAt.getTime()) {
+    throw new Error("Activated elections cannot change the schedule");
+  }
+
+  if (incomingElection.endAt && incomingElection.endAt.getTime() !== existingElection.endAt.getTime()) {
+    throw new Error("Activated elections cannot change the schedule");
+  }
+
+  if (
+    incomingElection.resultVisibility &&
+    incomingElection.resultVisibility !== existingElection.resultVisibility
+  ) {
+    throw new Error("Activated elections cannot change result visibility");
+  }
+
+  if (!incomingElection.positions) {
+    return;
+  }
+
+  if (incomingElection.positions.length !== existingElection.positions.length) {
+    throw new Error("Activated elections cannot add or remove positions");
+  }
+
+  incomingElection.positions.forEach((position, positionIndex) => {
+    const existingPosition = existingElection.positions[positionIndex];
+    if (!existingPosition) {
+      throw new Error("Activated elections cannot add or remove positions");
+    }
+
+    if (position.candidates.length !== existingPosition.candidates.length) {
+      throw new Error("Activated elections cannot add or remove candidates");
+    }
+
+    position.candidates.forEach((candidate, candidateIndex) => {
+      const existingCandidate = existingPosition.candidates[candidateIndex];
+      if (!existingCandidate) {
+        throw new Error("Activated elections cannot add or remove candidates");
+      }
+
+      if (candidate.studentId.trim() !== existingCandidate.student.studentId) {
+        throw new Error("Activated elections cannot change candidate assignments");
+      }
+    });
+  });
+}
+
 function canViewResults(status: string, resultVisibility: string, publishedAt: Date | null) {
   if (status === "ARCHIVED") return false;
   if (status === "RESULTS_PUBLISHED") return true;
@@ -307,16 +363,73 @@ export async function updateElection(id: number, data: Partial<CreateElectionDat
   const validated = updateElectionSchema.parse({ id, ...data });
   const existing = await prisma.election.findUnique({
     where: { id },
-    select: {
-      status: true,
-    },
+    include: electionInclude,
   });
 
   if (!existing) {
     throw new Error("Election not found");
   }
 
-  ensureDraftStatus(existing.status);
+  ensureEditableStatus(existing.status);
+
+  if (existing.status === "ACTIVE") {
+    assertActiveElectionUpdateIsRestricted(existing, validated);
+
+    const operations: any[] = [
+      prisma.election.update({
+        where: { id },
+        data: {
+          title: validated.title,
+          description: validated.description,
+          startAt: validated.startAt,
+          endAt: validated.endAt,
+          resultVisibility: validated.resultVisibility,
+        },
+      }),
+    ];
+
+    if (validated.positions) {
+      for (const [positionIndex, position] of validated.positions.entries()) {
+        const existingPosition = existing.positions[positionIndex];
+        operations.push(
+          prisma.electionPosition.update({
+            where: { id: existingPosition.id },
+            data: {
+              title: position.title,
+              description: position.description,
+            },
+          })
+        );
+
+        for (const [candidateIndex, candidate] of position.candidates.entries()) {
+          const existingCandidate = existingPosition.candidates[candidateIndex];
+          operations.push(
+            prisma.electionCandidate.update({
+              where: { id: existingCandidate.id },
+              data: {
+                bio: candidate.bio,
+                manifesto: candidate.manifesto,
+                photoUrl: candidate.photoUrl,
+              },
+            })
+          );
+        }
+      }
+    }
+
+    await prisma.$transaction(operations);
+
+    const election = await prisma.election.findUnique({
+      where: { id },
+      include: electionInclude,
+    });
+
+    if (!election) {
+      throw new Error("Election not found");
+    }
+
+    return serializeElection(election);
+  }
 
   const startAt = validated.startAt ?? undefined;
   const endAt = validated.endAt ?? undefined;

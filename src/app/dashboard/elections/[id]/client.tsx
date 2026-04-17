@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { getElectionResultsAction } from "@/app/actions/election.actions";
 import { ElectionResults } from "@/components/app/election/election-results";
 import { Button } from "@/components/ui/button";
 
+const EXPORTABLE_STATUSES = ["CLOSED", "RESULTS_PUBLISHED", "ARCHIVED"];
+
 interface ElectionDetailsClientProps {
   electionId: number;
 }
 
-export function ElectionDetailsClient({ electionId }: ElectionDetailsClientProps) {
+export function ElectionDetailsClient({
+  electionId,
+}: ElectionDetailsClientProps) {
   const [election, setElection] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +38,11 @@ export function ElectionDetailsClient({ electionId }: ElectionDetailsClientProps
   }, [electionId]);
 
   if (loading) {
-    return <div className="py-12 text-center"><RefreshCw className="mx-auto h-8 w-8 animate-spin" /></div>;
+    return (
+      <div className="py-12 text-center">
+        <RefreshCw className="mx-auto h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   if (!election) {
@@ -50,10 +58,20 @@ export function ElectionDetailsClient({ electionId }: ElectionDetailsClientProps
             Back to Elections
           </Link>
         </Button>
-        <Button variant="outline" onClick={fetchElection}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {EXPORTABLE_STATUSES.includes(election.status) && (
+            <Button asChild variant="outline">
+              <a href={`/api/elections/${electionId}/export/pdf`} download>
+                <Download className="mr-2 h-4 w-4" />
+                Export PDF
+              </a>
+            </Button>
+          )}
+          <Button variant="outline" onClick={fetchElection}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
       <ElectionResults election={election} />
     </div>

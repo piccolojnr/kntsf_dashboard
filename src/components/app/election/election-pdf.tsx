@@ -391,7 +391,7 @@ function ApprovalPosition({ position }: { position: any }) {
               ? `  ·  ${candidate.student.studentId}`
               : ""}
             {candidate.student.course ? `  ·  ${candidate.student.course}` : ""}
-            {candidate.student.level ? `  ·  L${candidate.student.level}` : ""}
+            {candidate.student.level ? `  ·  ${candidate.student.level}` : ""}
           </Text>
         ) : null}
 

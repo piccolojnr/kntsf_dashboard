@@ -213,6 +213,30 @@ export async function archiveElectionAction(id: number) {
   }
 }
 
+export async function unarchiveElectionAction(id: number) {
+  try {
+    const user = await requireElectionAdmin();
+    const userId = getNumericUserId(user);
+    const election = await services.election.unarchiveElection(id);
+    await logElectionAction(
+      userId,
+      "election.unarchive",
+      `Unarchived election "${election.title}" (#${id})`
+    );
+    revalidatePath("/dashboard/elections");
+    revalidatePath(`/dashboard/elections/${id}`);
+    revalidatePath("/elections");
+    revalidatePath("/elections/results");
+    revalidatePath(`/elections/${id}/results`);
+    return { success: true, data: election };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to unarchive election",
+    };
+  }
+}
+
 export async function getActiveElectionsForVotingAction() {
   try {
     const elections = await services.election.getActiveElectionsForVoting();

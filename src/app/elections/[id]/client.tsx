@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { ArrowLeft, Clock3, Vote } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock3, Vote } from "lucide-react";
 import { toast } from "sonner";
 import { getPublicElectionByIdAction } from "@/app/actions/election.actions";
 import { ElectionBallot } from "@/components/app/election/election-ballot";
@@ -78,15 +78,16 @@ export function ElectionBallotClient({ electionId }: ElectionBallotClientProps) 
   const startAt = new Date(election.startAt).getTime();
   const endAt = new Date(election.endAt).getTime();
   const votingOpen = election.status === "ACTIVE" && now >= startAt && now <= endAt;
-  const votingClosed = now > endAt || ["CLOSED", "RESULTS_PUBLISHED", "ARCHIVED"].includes(election.status);
-  const votingPending = !votingOpen && !votingClosed;
-  const statusLabel = votingOpen
-    ? "Voting open"
-    : votingPending
-      ? election.status === "ACTIVE"
-        ? "Activated, waiting to open"
-        : "Scheduled"
-      : "Voting closed";
+  const votingEnded =
+    now > endAt || ["CLOSED", "RESULTS_PUBLISHED", "ARCHIVED"].includes(election.status);
+  const votingPending = now < startAt && !["CLOSED", "RESULTS_PUBLISHED", "ARCHIVED"].includes(election.status);
+  const awaitingActivation = !votingOpen && !votingEnded && !votingPending;
+  const resultsVisible =
+    election.status !== "ARCHIVED" &&
+    (election.status === "RESULTS_PUBLISHED" ||
+      (election.resultVisibility === "AFTER_CLOSE" &&
+        ["CLOSED", "RESULTS_PUBLISHED"].includes(election.status)) ||
+      Boolean(election.publishedAt));
 
   if (votingOpen) {
     return (
@@ -101,6 +102,34 @@ export function ElectionBallotClient({ electionId }: ElectionBallotClientProps) 
       </div>
     );
   }
+
+  const statusLabel = votingPending
+    ? election.status === "ACTIVE"
+      ? "Activated, waiting to open"
+      : "Scheduled"
+    : votingEnded
+      ? resultsVisible
+        ? "Results available"
+        : "Voting closed"
+      : "Voting unavailable";
+
+  const cardTitle = votingPending
+    ? "Voting opens soon"
+    : votingEnded
+      ? resultsVisible
+        ? "Voting has ended"
+        : "Voting is closed"
+      : "Voting is not open";
+
+  const cardDescription = votingPending
+    ? election.status === "ACTIVE"
+      ? "This election has been activated and will accept votes automatically when the timer reaches zero."
+      : "This election is scheduled and will open once it is activated."
+    : votingEnded
+      ? resultsVisible
+        ? "Voting has ended for this election. Final outcomes are now available on the public results board."
+        : "Voting has ended for this election. Results have not been published to the public board yet."
+      : "The scheduled window has started, but this election is not currently accepting votes.";
 
   return (
     <div className="space-y-6">
@@ -122,23 +151,21 @@ export function ElectionBallotClient({ electionId }: ElectionBallotClientProps) 
               {election.positions.length} position{election.positions.length === 1 ? "" : "s"}
             </Badge>
           </div>
-          <CardTitle className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-            Voting opens soon
-          </CardTitle>
+          <CardTitle className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">{cardTitle}</CardTitle>
           <p className="max-w-2xl text-sm text-slate-200 md:text-base">
-            {election.status === "ACTIVE"
-              ? "This election has been activated and will accept votes automatically when the timer reaches zero."
-              : "This election is scheduled and will open once it is activated."}
+            {cardDescription}
           </p>
         </CardHeader>
 
         <CardContent className="space-y-8 p-6 md:p-10">
-          <div className="grid gap-4 md:grid-cols-4">
-            <TimerBlock label="Days" value={countdown?.days ?? 0} />
-            <TimerBlock label="Hours" value={countdown?.hours ?? 0} />
-            <TimerBlock label="Minutes" value={countdown?.minutes ?? 0} />
-            <TimerBlock label="Seconds" value={countdown?.seconds ?? 0} />
-          </div>
+          {votingPending ? (
+            <div className="grid gap-4 md:grid-cols-4">
+              <TimerBlock label="Days" value={countdown?.days ?? 0} />
+              <TimerBlock label="Hours" value={countdown?.hours ?? 0} />
+              <TimerBlock label="Minutes" value={countdown?.minutes ?? 0} />
+              <TimerBlock label="Seconds" value={countdown?.seconds ?? 0} />
+            </div>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <InfoBlock
@@ -159,9 +186,37 @@ export function ElectionBallotClient({ electionId }: ElectionBallotClientProps) 
             </div>
           ) : null}
 
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-5 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-950/40">
-            Ballot access will unlock automatically when the countdown reaches zero.
-          </div>
+          {votingPending ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-5 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-950/40">
+              Ballot access will unlock automatically when the countdown reaches zero.
+            </div>
+          ) : null}
+
+          {votingEnded && resultsVisible ? (
+            <div className="rounded-3xl border border-cyan-200 bg-cyan-50/80 p-5 dark:border-cyan-900/60 dark:bg-cyan-950/20">
+              <p className="text-sm text-slate-700 dark:text-slate-200">
+                Final results are available for this election.
+              </p>
+              <Button asChild className="mt-4">
+                <Link href={getElectionUrl(`/elections/${election.id}/results`)}>
+                  View Results
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          ) : null}
+
+          {votingEnded && !resultsVisible ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-5 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-950/40">
+              Voting has ended. Results are not available on the public board yet.
+            </div>
+          ) : null}
+
+          {awaitingActivation ? (
+            <div className="rounded-3xl border border-dashed border-amber-300 bg-amber-50/80 p-5 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+              The election window has started, but voting has not been activated yet.
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

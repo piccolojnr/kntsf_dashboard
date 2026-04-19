@@ -11,6 +11,7 @@ import {
   Play,
   Plus,
   RefreshCw,
+  RotateCcw,
   Send,
   Square,
   XCircle,
@@ -24,6 +25,7 @@ import {
   publishElectionResultsAction,
   rejectElectionAction,
   submitElectionForApprovalAction,
+  unarchiveElectionAction,
 } from "@/app/actions/election.actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -267,6 +269,23 @@ export function ElectionsClient({ permissions }: ElectionsClientProps) {
                   Archive
                 </Button>
               </>
+            ) : null}
+            {permissions.isAdmin && election.status === "ARCHIVED" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  runAction(
+                    `unarchive-${election.id}`,
+                    () => unarchiveElectionAction(election.id),
+                    "Election restored",
+                  )
+                }
+                disabled={busyAction === `unarchive-${election.id}`}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Unarchive
+              </Button>
             ) : null}
           </div>
         </div>

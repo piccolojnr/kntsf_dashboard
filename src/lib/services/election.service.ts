@@ -630,6 +630,22 @@ export async function archiveElection(id: number) {
   return updateElectionStatus(id, "ARCHIVED");
 }
 
+export async function unarchiveElection(id: number) {
+  const election = await prisma.election.findUnique({
+    where: { id },
+    select: { status: true, publishedAt: true },
+  });
+  if (!election) throw new Error("Election not found");
+  if (election.status !== "ARCHIVED") {
+    throw new Error("Only archived elections can be unarchived");
+  }
+
+  return updateElectionStatus(
+    id,
+    election.publishedAt ? "RESULTS_PUBLISHED" : "CLOSED"
+  );
+}
+
 export async function getActiveElectionsForVoting() {
   const now = new Date();
   return prisma.election.findMany({

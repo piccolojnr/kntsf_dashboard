@@ -23,6 +23,14 @@ export interface PermitData {
   isSecret?: boolean
 }
 
+export interface IssuePermitForStudentByStaffInput {
+  /**
+   * Public Student.studentId when string, internal Student.id when number.
+   */
+  studentId: string | number
+  issuedById: number
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   total: number
@@ -1042,6 +1050,118 @@ function generatePermitCode(): string {
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 4);
   return nanoid();
 
+}
+
+export async function issuePermitForStudentByStaff(
+  input: IssuePermitForStudentByStaffInput
+): Promise<PermitResponse> {
+  try {
+    const [student, issuedBy, config] = await Promise.all([
+      typeof input.studentId === 'number'
+        ? prisma.student.findUnique({ where: { id: input.studentId } })
+        : prisma.student.findUnique({ where: { studentId: input.studentId } }),
+      prisma.user.findUnique({
+        where: { id: input.issuedById },
+        select: { id: true, username: true }
+      }),
+      prisma.config.findFirst({
+        where: { id: 1 },
+        include: { permitConfig: true }
+      })
+    ])
+
+    if (!student) {
+      return { success: false, error: 'Student not found' }
+    }
+
+    if (!issuedBy) {
+      return { success: false, error: 'Issuing user not found' }
+    }
+
+    if (!config?.permitConfig) {
+      return { success: false, error: 'Permit configuration not found' }
+    }
+
+    if (!config.permitConfig.enablePermitRequest) {
+      return { success: false, error: 'Permit issuing is currently disabled' }
+    }
+
+    const code = generatePermitCode()
+    const yearPrefix = new Date().getFullYear().toString().slice(-2)
+    const permitCode = `${yearPrefix}-${code}`
+    const hashedCode = await bcrypt.hash(permitCode, 10)
+    const permitHash = permitCode.slice(-6)
+    const expiryDate = config.permitConfig.expirationDate
+    const amountPaid = config.permitConfig.defaultAmount || 100
+    const currency = config.permitConfig.currency || 'GHS'
+
+    const permit = await prisma.$transaction(async (tx) => {
+      const createdPermit = await tx.permit.create({
+        data: {
+          permitCode: hashedCode,
+          originalCode: permitCode,
+          permitHash,
+          expiryDate,
+          amountPaid,
+          studentId: student.id,
+          issuedById: issuedBy.id,
+          status: 'active'
+        }
+      })
+
+      await tx.payment.create({
+        data: {
+          amount: amountPaid,
+          currency,
+          status: 'SUCCESS',
+          studentId: student.id,
+          permitId: createdPermit.id,
+          paymentReference: generatePaymentReference()
+        }
+      })
+
+      return tx.permit.findUniqueOrThrow({
+        where: { id: createdPermit.id },
+        include: {
+          student: true,
+          issuedBy: {
+            select: { username: true }
+          }
+        }
+      })
+    })
+
+    const verificationUrl = `${BASE_URL}/permits/verify?code=${permitCode}`
+    const qrCode = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(verificationUrl)}&size=200x200`
+
+    const emailResult = await services.email.sendPermitEmails({
+      student: {
+        email: student.email || '',
+        name: student.name || '',
+        studentId: student.studentId || '',
+        course: student.course || '',
+        level: student.level || ''
+      },
+      permit: {
+        id: permit.id.toString(),
+        amountPaid: permit.amountPaid,
+        expiryDate: permit.expiryDate
+      },
+      qrCode,
+      permitCode
+    })
+
+    return {
+      success: true,
+      data: permit,
+      qrCode,
+      permitCode,
+      error: emailResult.success ? undefined : emailResult.error
+    }
+  } catch (error: any) {
+    log.error('Error issuing permit for student by staff:', error)
+    return handleError(error)
+  }
 }
 
 function generatePaymentReference(): string {

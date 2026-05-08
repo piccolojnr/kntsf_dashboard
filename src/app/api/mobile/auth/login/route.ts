@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     const result = await authenticateMobileCredentials(body)
     return mobileSuccess(result)
   } catch (error) {
+    console.error('Login error:', error)
     return handleMobileRouteError(error)
   }
 }

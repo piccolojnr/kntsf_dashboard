@@ -14,17 +14,9 @@ export async function POST(request: NextRequest) {
     const user = await requireOperationsUser(request)
     const body = issuePermitSchema.parse(await request.json())
 
-    const permitConfig = await services.config.getPermitConfig()
-    if (!permitConfig.success || !permitConfig.data) {
-      return mobileError('INTERNAL_ERROR', permitConfig.error || 'Permit configuration not found', 500)
-    }
-
-    if (!permitConfig.data.enablePermitRequest) {
-      return mobileError('FORBIDDEN', 'Permit issuing is currently disabled', 403)
-    }
-
-    const issuedPermit = await services.permit.create({
-      studentId: body.studentId
+    const issuedPermit = await services.permit.issuePermitForStudentByStaff({
+      studentId: body.studentId,
+      issuedById: user.id
     })
 
     if (!issuedPermit.success || !issuedPermit.data) {
@@ -45,7 +37,7 @@ export async function POST(request: NextRequest) {
         qrCode: issuedPermit.qrCode,
         permitCode: issuedPermit.permitCode
       },
-      verification: verification.success ? verification.data : null
+      verificationResult: verification.success ? verification.data : null
     })
   } catch (error) {
     return handleMobileRouteError(error)

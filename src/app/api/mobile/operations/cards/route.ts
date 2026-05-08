@@ -74,6 +74,7 @@ function isNfcCardStatus(status?: string | null): status is NfcCardStatus {
   return (
     status === 'active' ||
     status === 'inactive' ||
+    status === 'revoked' ||
     status === 'lost' ||
     status === 'stolen' ||
     status === 'replaced' ||

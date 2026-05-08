@@ -386,6 +386,43 @@ async function main() {
         }
     });
 
+    const studentPasswordHash = await bcrypt.hash('student123', 10);
+    const devStudent = await prisma.student.upsert({
+        where: { studentId: '26102859' },
+        update: {
+            name: 'Mobile Test Student',
+            email: 'student@example.com',
+            course: 'Computer Science',
+            level: '300',
+            number: '+233201110001'
+        },
+        create: {
+            studentId: '26102859',
+            name: 'Mobile Test Student',
+            email: 'student@example.com',
+            course: 'Computer Science',
+            level: '300',
+            number: '+233201110001'
+        }
+    });
+
+    await prisma.studentAuth.upsert({
+        where: { username: 'student' },
+        update: {
+            email: 'student@example.com',
+            passwordHash: studentPasswordHash,
+            isActive: true,
+            studentId: devStudent.id
+        },
+        create: {
+            username: 'student',
+            email: 'student@example.com',
+            passwordHash: studentPasswordHash,
+            isActive: true,
+            studentId: devStudent.id
+        }
+    });
+
     console.log('Seed completed successfully!');
 }
 

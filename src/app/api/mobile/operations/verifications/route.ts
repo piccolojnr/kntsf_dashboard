@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               originalCode: true,
-              permitHash: true,
               status: true,
               startDate: true,
               expiryDate: true,
@@ -75,7 +74,16 @@ export async function GET(request: NextRequest) {
         reason: log.reason,
         createdAt: log.createdAt,
         student: log.student,
-        permit: log.permit,
+        permit: log.permit
+          ? {
+              id: log.permit.id,
+              permitCode: log.permit.originalCode,
+              status: log.permit.status,
+              startDate: log.permit.startDate,
+              expiryDate: log.permit.expiryDate,
+              amountPaid: log.permit.amountPaid
+            }
+          : null,
         card: log.card,
         verifier: log.verifierUser
       })),

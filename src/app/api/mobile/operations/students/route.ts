@@ -63,7 +63,6 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               originalCode: true,
-              permitHash: true,
               status: true,
               startDate: true,
               expiryDate: true,
@@ -84,7 +83,16 @@ export async function GET(request: NextRequest) {
         level: student.level,
         phone: student.number,
         activeCard: student.nfcCards[0] || null,
-        activePermit: student.permits[0] || null
+        activePermit: student.permits[0]
+          ? {
+              id: student.permits[0].id,
+              permitCode: student.permits[0].originalCode,
+              status: student.permits[0].status,
+              startDate: student.permits[0].startDate,
+              expiryDate: student.permits[0].expiryDate,
+              amountPaid: student.permits[0].amountPaid
+            }
+          : null
       })),
       pagination: buildPagination({ page, limit, total })
     })

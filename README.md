@@ -46,6 +46,31 @@ newsletters, and more, all in one place.
 > For more details on configuration, database setup, and deployment, see the
 > documentation in the `docs/` folder.
 
+## Development Mobile Test Credentials
+
+After running `pnpm prisma:seed`, these development credentials are available for
+testing the mobile API:
+
+| Role | Username | Password |
+| --- | --- | --- |
+| Admin | `admin` | `admin123` |
+| Staff | `abdulai.abdulai` | `exec123` |
+| Student | `student` | `student123` |
+
+These credentials are for local development only. Do not use them in production
+or shared staging databases.
+
+## Windows Prisma Generate Troubleshooting
+
+If `pnpm prisma generate` fails on Windows with an `EPERM` error while renaming
+`query_engine-windows.dll.node`, a running process is usually locking Prisma's
+generated client files.
+
+1. Stop the Next.js development server.
+2. Stop Prisma Studio if it is open.
+3. Stop any other Node.js process using this project.
+4. Rerun `pnpm prisma generate`.
+
 ## Project Structure
 
 - **src/app/** – Main application pages and API routes.

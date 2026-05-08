@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = revokeCardSchema.parse(await request.json())
     const response = await services.nfcCard.revokeCard({
       cardId: body.cardId,
-      status: 'inactive'
+      status: 'revoked'
     })
 
     if (!response.success || !response.data) {

@@ -603,6 +603,7 @@ enum PermitStatus {
 enum NfcCardStatus {
   active
   inactive
+  revoked
   lost
   stolen
   replaced

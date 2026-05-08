@@ -20,7 +20,7 @@ export const replaceCardForStudentSchema = z.object({
 export const revokeCardSchema = z.object({
     cardId: z.number().int().positive().optional(),
     uid: uidSchema.optional(),
-    status: z.enum(['inactive', 'lost', 'stolen', 'damaged']).default('inactive')
+    status: z.enum(['inactive', 'revoked', 'lost', 'stolen', 'damaged']).default('revoked')
 }).refine((data) => data.cardId || data.uid, {
     message: 'Either cardId or uid is required'
 })

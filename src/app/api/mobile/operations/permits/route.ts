@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
         ? {
             OR: [
               { originalCode: { contains: search } },
-              { permitHash: { contains: search } },
               { student: { studentId: { contains: search } } },
               { student: { name: { contains: search } } }
             ]
@@ -41,7 +40,6 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           originalCode: true,
-          permitHash: true,
           status: true,
           startDate: true,
           expiryDate: true,
@@ -72,8 +70,7 @@ export async function GET(request: NextRequest) {
     return mobileSuccess({
       items: permits.map((permit) => ({
         id: permit.id,
-        originalCode: permit.originalCode,
-        permitHash: permit.permitHash,
+        permitCode: permit.originalCode,
         status: permit.status,
         startDate: permit.startDate,
         expiryDate: permit.expiryDate,

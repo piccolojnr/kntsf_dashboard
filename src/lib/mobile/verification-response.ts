@@ -90,7 +90,6 @@ type VerificationSource = NormalizedVerificationResult & {
   permit?: NormalizedVerificationResult['permit'] & {
     studentId?: number | null
     originalCode?: string | null
-    permitHash?: string | null
   }
   card?: NormalizedVerificationResult['card'] & {
     studentId?: number | null
@@ -166,7 +165,7 @@ export function toMobileIssuedPermit(permit: Permit & { originalCode?: string | 
   return {
     id: String(permit.id),
     studentId: String(permit.studentId),
-    permitCode: permit.originalCode || permit.permitHash || '',
+    permitCode: permit.originalCode || '',
     status: permit.status,
     startDate: permit.startDate,
     expiryDate: permit.expiryDate,
@@ -231,8 +230,9 @@ function getDecisionFromReason(reason: MobileVerificationReason): MobileVerifica
     case 'revoked_permit':
       return 'revoked_permit'
     case 'no_active_permit':
-    case 'permit_not_found':
       return 'no_active_permit'
+    case 'permit_not_found':
+      return 'denied'
     case 'card_not_registered':
       return 'card_not_registered'
     case 'card_inactive':
@@ -262,15 +262,14 @@ async function toMobilePermit(
     where: { id: permit.id },
     select: {
       studentId: true,
-      originalCode: true,
-      permitHash: true
+      originalCode: true
     }
   })
 
   return {
     id: String(permit.id),
     studentId: String(permitDetails?.studentId ?? permit.studentId ?? fallbackStudentId ?? ''),
-    permitCode: permitDetails?.originalCode || permitDetails?.permitHash || permit.originalCode || permit.permitHash || '',
+    permitCode: permitDetails?.originalCode || permit.originalCode || '',
     status: permit.status,
     startDate: permit.startDate,
     expiryDate: permit.expiryDate,

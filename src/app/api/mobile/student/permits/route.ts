@@ -28,7 +28,17 @@ export async function GET(request: NextRequest) {
     })
 
     return mobileSuccess({
-      permits: student?.permits || []
+      permits: student?.permits.map((permit) => ({
+        id: permit.id,
+        permitCode: permit.originalCode,
+        status: permit.status,
+        startDate: permit.startDate,
+        expiryDate: permit.expiryDate,
+        amountPaid: permit.amountPaid,
+        cardDelivered: permit.cardDelivered,
+        createdAt: permit.createdAt,
+        updatedAt: permit.updatedAt
+      })) || []
     })
   } catch (error) {
     return handleMobileRouteError(error)

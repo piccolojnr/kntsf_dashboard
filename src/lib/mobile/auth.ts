@@ -105,6 +105,10 @@ export async function authenticateMobileCredentials(input: {
     throw new MobileAuthError('FORBIDDEN', 'Student account is inactive', 403)
   }
 
+  if (!studentAuth.passwordHash) {
+    throw new MobileAuthError('FORBIDDEN', 'Your student account has not been set up yet.', 403)
+  }
+
   const passwordMatches = await compare(input.password, studentAuth.passwordHash)
   if (!passwordMatches) {
     await prisma.studentAuth.update({

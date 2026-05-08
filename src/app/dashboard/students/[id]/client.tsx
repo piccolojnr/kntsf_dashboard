@@ -33,6 +33,13 @@ import {
 import { AccessRoles } from "@/lib/role";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  activateStudentAccountAction,
+  disableStudentAccountAction,
+  getStudentAccountStatusAction,
+  sendStudentPasswordResetLinkAction,
+  sendStudentPasswordSetupLinkAction,
+} from "@/app/actions/student-auth.actions";
 
 interface StudentDetailsClientProps {
   user: SessionUser;
@@ -47,6 +54,7 @@ export function StudentDetailsClient({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPermitDialogOpen, setIsPermitDialogOpen] = useState(false);
+  const [studentAccountBusyAction, setStudentAccountBusyAction] = useState<string | null>(null);
   const { data: permitConfig } = useQuery({
     queryKey: ["permitConfig"],
     queryFn: async () => {
@@ -72,6 +80,20 @@ export function StudentDetailsClient({
     },
     retry: 1,
   });
+  const {
+    data: studentAccountResponse,
+    isLoading: isStudentAccountLoading,
+  } = useQuery({
+    queryKey: ["student-account", studentId],
+    queryFn: async () => {
+      const response = await getStudentAccountStatusAction(studentId);
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load account status");
+      }
+      return "data" in response ? response.data ?? null : null;
+    },
+    retry: 1,
+  });
 
   if (error) {
     toast.error(error.message || "Failed to load student details");
@@ -89,6 +111,41 @@ export function StudentDetailsClient({
         return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const runStudentAccountAction = async (
+    actionKey: string,
+    action: () => Promise<{ success: boolean; error?: string }>,
+    successMessage: string,
+  ) => {
+    setStudentAccountBusyAction(actionKey);
+    try {
+      const response = await action();
+      if (!response.success) {
+        toast.error(response.error || "Action failed");
+        return;
+      }
+      toast.success(successMessage);
+      queryClient.invalidateQueries({ queryKey: ["student-account", studentId] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Action failed");
+    } finally {
+      setStudentAccountBusyAction(null);
+    }
+  };
+
+  const getStudentAccountBadge = () => {
+    const status = studentAccountResponse?.status ?? "not_activated";
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+      case "pending_setup":
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending setup</Badge>;
+      case "disabled":
+        return <Badge className="bg-red-100 text-red-800">Disabled</Badge>;
+      default:
+        return <Badge variant="outline">Not activated</Badge>;
     }
   };
 
@@ -237,6 +294,114 @@ export function StudentDetailsClient({
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Student Account</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isStudentAccountLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-5 w-64" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Status</p>
+                    <div className="mt-1">{getStudentAccountBadge()}</div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Username</p>
+                    <p className="mt-1">{studentAccountResponse?.username || "Not created"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Email</p>
+                    <p className="mt-1">{studentAccountResponse?.email || student.email || "Unavailable"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Last Login</p>
+                    <p className="mt-1">
+                      {studentAccountResponse?.lastLoginAt
+                        ? format(new Date(studentAccountResponse.lastLoginAt), "MMM d, yyyy h:mm a")
+                        : "Never"}
+                    </p>
+                  </div>
+                </div>
+
+                {permissions.isExecutive ? (
+                  <div className="flex flex-wrap gap-2">
+                    {!studentAccountResponse ? (
+                      <Button
+                        disabled={studentAccountBusyAction !== null}
+                        onClick={() =>
+                          runStudentAccountAction(
+                            "activate",
+                            async () => {
+                              const activateResponse = await activateStudentAccountAction(student.studentId);
+                              if (!activateResponse.success) return activateResponse;
+                              return sendStudentPasswordSetupLinkAction(student.studentId);
+                            },
+                            "Account activated and setup link sent",
+                          )
+                        }
+                      >
+                        Activate Account
+                      </Button>
+                    ) : null}
+                    {studentAccountResponse && !studentAccountResponse.hasPassword ? (
+                      <Button
+                        disabled={studentAccountBusyAction !== null}
+                        variant="secondary"
+                        onClick={() =>
+                          runStudentAccountAction(
+                            "setup",
+                            () => sendStudentPasswordSetupLinkAction(student.studentId),
+                            "Setup link sent",
+                          )
+                        }
+                      >
+                        Resend Setup Link
+                      </Button>
+                    ) : null}
+                    {studentAccountResponse?.hasPassword ? (
+                      <Button
+                        disabled={studentAccountBusyAction !== null}
+                        variant="secondary"
+                        onClick={() =>
+                          runStudentAccountAction(
+                            "reset",
+                            () => sendStudentPasswordResetLinkAction(student.studentId),
+                            "Password reset link sent",
+                          )
+                        }
+                      >
+                        Send Password Reset Link
+                      </Button>
+                    ) : null}
+                    {studentAccountResponse?.isActive ? (
+                      <Button
+                        disabled={studentAccountBusyAction !== null}
+                        variant="destructive"
+                        onClick={() =>
+                          runStudentAccountAction(
+                            "disable",
+                            () => disableStudentAccountAction(student.studentId),
+                            "Student account disabled",
+                          )
+                        }
+                      >
+                        Disable Account
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            )}
           </CardContent>
         </Card>
 

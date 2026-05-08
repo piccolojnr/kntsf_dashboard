@@ -204,7 +204,7 @@ export async function revokeCard(input: RevokeCardInput): Promise<ServiceRespons
     const updatedCard = await prisma.nfcCard.update({
       where: { id: card.id },
       data: {
-        status: status as unknown as NfcCardStatus,
+        status,
         deactivatedAt: now,
         lostAt: status === 'lost' ? now : card.lostAt
       }

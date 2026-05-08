@@ -109,7 +109,7 @@ model StudentAuth {
   studentId         Int       @unique
   username          String    @unique
   email             String    @unique
-  passwordHash      String
+  passwordHash      String?
   isActive          Boolean   @default(true)
   lastLoginAt       DateTime?
   lastFailedLoginAt DateTime?
@@ -117,10 +117,25 @@ model StudentAuth {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   student           Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tokens            StudentAuthToken[]
 
   @@index([email])
   @@index([username])
   @@index([isActive])
+}
+
+model StudentAuthToken {
+  id            Int                  @id @default(autoincrement())
+  studentAuthId Int
+  tokenHash     String               @unique
+  type          StudentAuthTokenType
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime             @default(now())
+  studentAuth   StudentAuth          @relation(fields: [studentAuthId], references: [id], onDelete: Cascade)
+
+  @@index([studentAuthId, type, usedAt])
+  @@index([expiresAt])
 }
 
 model NfcCard {
@@ -626,6 +641,11 @@ enum VerificationResult {
   card_inactive
   mismatch
   error
+}
+
+enum StudentAuthTokenType {
+  setup_password
+  reset_password
 }
 
 enum SubscriptionStatus {

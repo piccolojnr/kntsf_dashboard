@@ -7,18 +7,32 @@ import { generatePermitEmailTemplate } from '../email/templates-views/permit-ema
 import { generateReceiptEmailTemplate } from '../email/templates-views/receipt-email-template'
 import { generateRevokedPermitEmailTemplate } from '../email/templates-views/revoked-permit-email-template'
 import { generatePasswordResetEmailTemplate } from '../email/templates-views/password-reset-email-template'
+import { generateStudentAuthPasswordEmailTemplate } from '../email/templates-views/student-auth-password-email-template'
 import { render } from '@react-email/components'
 import { handleError } from '../utils'
 import { generateContactEmailTemplate } from '../email/templates-views/contact-email-template'
-// Create a transporter using Gmail
+console.log('Email service initialized with SMTP host:', process.env.SMTP_HOST, 'and port:', process.env.SMTP_PORT)
+
+const smtpHost = process.env.SMTP_HOST || "smtp.zoho.com"
+const smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465
+const smtpSecure = process.env.SMTP_SECURE
+  ? process.env.SMTP_SECURE === 'true'
+  : smtpPort === 465
+const smtpUser = process.env.SMTP_USER
+const smtpPass = process.env.SMTP_PASS
+
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.zoho.com",
-  port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER || "admin@knutsfordsrc.com",
-    pass: process.env.SMTP_PASS || "VfLXcDCtKHHT"
-  },
+  host: smtpHost,
+  port: smtpPort,
+  secure: smtpSecure,
+  ...(smtpUser && smtpPass
+    ? {
+      auth: {
+        user: smtpUser,
+        pass: smtpPass
+      }
+    }
+    : {}),
   tls: {
     rejectUnauthorized: false
   }
@@ -165,6 +179,43 @@ export async function sendPasswordResetEmail({ email, name, username, resetToken
     return { success: true }
   } catch (error) {
     log.error('Error sending password reset email:', error)
+    return handleError(error)
+  }
+}
+
+export async function sendStudentAuthPasswordEmail({
+  email,
+  name,
+  username,
+  setupUrl,
+  purpose,
+  expiresInHours
+}: {
+  email: string
+  name: string
+  username: string
+  setupUrl: string
+  purpose: 'setup_password' | 'reset_password'
+  expiresInHours: number
+}): Promise<ServiceResponse> {
+  try {
+    const template = generateStudentAuthPasswordEmailTemplate({
+      name,
+      username,
+      setupUrl,
+      purpose,
+      expiresInHours
+    })
+    await sendEmail({
+      to: email,
+      subject: purpose === 'reset_password'
+        ? 'Knutsford SRC App - Reset your student password'
+        : 'Knutsford SRC App - Set up your student password',
+      template
+    })
+    return { success: true }
+  } catch (error) {
+    log.error('Error sending student auth password email:', error)
     return handleError(error)
   }
 }

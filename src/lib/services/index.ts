@@ -16,6 +16,8 @@ import * as  PaymentService from "./payment.service";
 import * as  PollService from "./poll.service";
 import * as  ElectionService from "./election.service";
 import * as  SouvenirService from "./souvenir.service";
+import * as NfcCardService from "./nfc-card.service";
+import * as VerificationService from "./verification.service";
 
 const services = {
     audit: AuditService,
@@ -36,6 +38,8 @@ const services = {
     poll: PollService,
     election: ElectionService,
     souvenir: SouvenirService,
+    nfcCard: NfcCardService,
+    verification: VerificationService,
 }
 
 export default services;

@@ -1,6 +1,5 @@
 'use server'
 
-import { createHash } from 'crypto'
 import bcrypt from 'bcryptjs'
 import {
   NfcCard,
@@ -10,34 +9,15 @@ import {
   VerificationMethod,
   VerificationResult
 } from '@prisma/client'
-import { z } from 'zod'
 import prisma from '../prisma/client'
 import { log } from '../logger'
 import { handleError } from '../utils'
 import { ServiceResponse } from '../types/common'
-import { hashUid } from './nfc-card.service'
+import { buildResult, hashIdentifier, hashUid, mapReasonToLogResult, NormalizedMethod, NormalizedVerificationResult } from '../nfc-helpers'
+import { studentIdSchema, uidSchema, permitCodeSchema } from '../schemas/nfc-card-schema'
 
-const studentIdSchema = z.string().trim().min(1, 'Student ID is required')
-const uidSchema = z.string().trim().min(1, 'NFC UID is required')
-const permitCodeSchema = z.string().trim().min(1, 'Permit code is required')
 
-type NormalizedMethod = 'student_id' | 'nfc_uid' | 'permit_code'
-type VerificationOutcome = 'allowed' | 'denied' | 'warning'
 
-type StudentSummary = Pick<Student, 'id' | 'studentId' | 'name' | 'email' | 'course' | 'level'>
-type PermitSummary = Pick<Permit, 'id' | 'status' | 'startDate' | 'expiryDate' | 'amountPaid' | 'createdAt'>
-type CardSummary = Pick<NfcCard, 'id' | 'uidLast4' | 'status' | 'issuedAt' | 'activatedAt' | 'deactivatedAt'>
-
-export interface NormalizedVerificationResult {
-  outcome: VerificationOutcome
-  reason: string
-  message: string
-  student?: StudentSummary
-  permit?: PermitSummary
-  card?: CardSummary
-  method: NormalizedMethod
-  checkedAt: Date
-}
 
 type StudentWithPermits = Student & {
   permits: Permit[]
@@ -375,27 +355,7 @@ async function evaluatePermit(params: {
   })
 }
 
-function buildResult(params: {
-  outcome: VerificationOutcome
-  reason: string
-  message: string
-  method: NormalizedMethod
-  checkedAt: Date
-  student?: Student
-  permit?: Permit
-  card?: NfcCard
-}): NormalizedVerificationResult {
-  return {
-    outcome: params.outcome,
-    reason: params.reason,
-    message: params.message,
-    student: params.student ? summarizeStudent(params.student) : undefined,
-    permit: params.permit ? summarizePermit(params.permit) : undefined,
-    card: params.card ? summarizeCard(params.card) : undefined,
-    method: params.method,
-    checkedAt: params.checkedAt
-  }
-}
+
 
 async function createVerificationLog(input: {
   method: VerificationMethod
@@ -464,62 +424,4 @@ async function findPermitByCode(code: string): Promise<PermitWithStudent | null>
   }
 
   return null
-}
-
-function mapReasonToLogResult(reason: string): VerificationResult {
-  switch (reason) {
-    case 'valid_permit':
-      return 'valid'
-    case 'permit_expired':
-      return 'expired'
-    case 'permit_revoked':
-      return 'revoked'
-    case 'card_inactive':
-      return 'card_inactive'
-    case 'student_not_found':
-    case 'card_not_found':
-    case 'permit_not_found':
-      return 'not_found'
-    case 'no_active_permit':
-      return 'invalid'
-    default:
-      return 'error'
-  }
-}
-
-function hashIdentifier(identifier: string): string {
-  return createHash('sha256').update(identifier.trim()).digest('hex')
-}
-
-function summarizeStudent(student: Student): StudentSummary {
-  return {
-    id: student.id,
-    studentId: student.studentId,
-    name: student.name,
-    email: student.email,
-    course: student.course,
-    level: student.level
-  }
-}
-
-function summarizePermit(permit: Permit): PermitSummary {
-  return {
-    id: permit.id,
-    status: permit.status,
-    startDate: permit.startDate,
-    expiryDate: permit.expiryDate,
-    amountPaid: permit.amountPaid,
-    createdAt: permit.createdAt
-  }
-}
-
-function summarizeCard(card: NfcCard): CardSummary {
-  return {
-    id: card.id,
-    uidLast4: card.uidLast4,
-    status: card.status,
-    issuedAt: card.issuedAt,
-    activatedAt: card.activatedAt,
-    deactivatedAt: card.deactivatedAt
-  }
 }

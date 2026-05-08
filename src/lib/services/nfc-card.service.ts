@@ -1,45 +1,18 @@
 'use server'
 
-import { createHash, createHmac } from 'crypto'
 import { NfcCard, NfcCardStatus } from '@prisma/client'
-import { z } from 'zod'
 import prisma from '../prisma/client'
 import { log } from '../logger'
 import { handleError } from '../utils'
 import { ServiceResponse } from '../types/common'
+import { getUidLast4, hashUid } from '../nfc-helpers'
+import { RegisterCardForStudentInput, registerCardForStudentSchema, ReplaceCardForStudentInput, replaceCardForStudentSchema, RevokeCardInput, revokeCardSchema, uidSchema } from '../schemas/nfc-card-schema'
 
 const activeStatus: NfcCardStatus = 'active'
 const inactiveStatus: NfcCardStatus = 'inactive'
 const replacedStatus: NfcCardStatus = 'replaced'
 
-const uidSchema = z.string().trim().min(1, 'NFC UID is required')
 
-const studentIdentifierSchema = z.union([
-  z.number().int().positive(),
-  z.string().trim().min(1, 'Student ID is required')
-])
-
-export const registerCardForStudentSchema = z.object({
-  studentId: studentIdentifierSchema,
-  uid: uidSchema
-})
-
-export const replaceCardForStudentSchema = z.object({
-  studentId: studentIdentifierSchema,
-  uid: uidSchema
-})
-
-export const revokeCardSchema = z.object({
-  cardId: z.number().int().positive().optional(),
-  uid: uidSchema.optional(),
-  status: z.enum(['inactive', 'lost', 'stolen', 'damaged']).default('inactive')
-}).refine((data) => data.cardId || data.uid, {
-  message: 'Either cardId or uid is required'
-})
-
-export type RegisterCardForStudentInput = z.infer<typeof registerCardForStudentSchema>
-export type ReplaceCardForStudentInput = z.infer<typeof replaceCardForStudentSchema>
-export type RevokeCardInput = z.infer<typeof revokeCardSchema>
 
 export type NfcCardWithStudent = NfcCard & {
   student: {
@@ -52,20 +25,7 @@ export type NfcCardWithStudent = NfcCard & {
   }
 }
 
-export function hashUid(uid: string): string {
-  const normalizedUid = normalizeUid(uid)
-  const secret = process.env.NFC_UID_HASH_SECRET || process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET
 
-  if (secret) {
-    return createHmac('sha256', secret).update(normalizedUid).digest('hex')
-  }
-
-  return createHash('sha256').update(normalizedUid).digest('hex')
-}
-
-export function getUidLast4(uid: string): string {
-  return normalizeUid(uid).slice(-4)
-}
 
 export async function registerCardForStudent(
   input: RegisterCardForStudentInput
@@ -311,9 +271,7 @@ export async function getCardByUid(uid: string): Promise<ServiceResponse<NfcCard
   }
 }
 
-function normalizeUid(uid: string): string {
-  return uid.trim().replace(/[\s:-]/g, '').toUpperCase()
-}
+
 
 async function resolveStudent(studentId: string | number) {
   if (typeof studentId === 'number') {

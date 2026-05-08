@@ -4,6 +4,7 @@ import services from '@/lib/services'
 import { requireOperationsUser } from '@/lib/mobile/auth'
 import { mobileError, mobileSuccess } from '@/lib/mobile/api-response'
 import { handleMobileRouteError } from '@/lib/mobile/route-helpers'
+import { buildMobileVerificationResult, toMobileIssuedPermit } from '@/lib/mobile/verification-response'
 
 const issuePermitSchema = z.object({
   studentId: z.string().trim().min(1, 'Student ID is required')
@@ -27,17 +28,15 @@ export async function POST(request: NextRequest) {
 
     return mobileSuccess({
       permit: {
-        id: issuedPermit.data.id,
-        status: issuedPermit.data.status,
-        startDate: issuedPermit.data.startDate,
-        expiryDate: issuedPermit.data.expiryDate,
-        amountPaid: issuedPermit.data.amountPaid,
-        student: issuedPermit.data.student,
-        issuedBy: issuedPermit.data.issuedBy,
-        qrCode: issuedPermit.qrCode,
-        permitCode: issuedPermit.permitCode
+        ...toMobileIssuedPermit(issuedPermit.data),
+        qrCode: issuedPermit.qrCode
       },
-      verificationResult: verification.success ? verification.data : null
+      verificationResult: verification.success && verification.data
+        ? await buildMobileVerificationResult(verification.data, {
+            method: 'student_id',
+            value: body.studentId
+          })
+        : null
     })
   } catch (error) {
     return handleMobileRouteError(error)

@@ -3,7 +3,7 @@ import prisma from '../prisma/client'
 import bcrypt from 'bcryptjs'
 import { BASE_URL } from '../constants'
 import { log } from '../logger'
-import { Permit, Prisma, Student } from "@prisma/client"
+import { Permit, PermitStatus, Prisma, Student } from "@prisma/client"
 import { customAlphabet } from 'nanoid'
 import { ServiceResponse, StudentPermit } from '../types/common'
 import { getSession } from '../auth/auth'
@@ -92,8 +92,9 @@ export async function getAll(params: {
 }> {
   try {
     const { page = 1, pageSize = 10, search, status, issuedBy } = params
+    const statusFilter = isPermitStatus(status) ? status : undefined
     const where: Prisma.PermitWhereInput = {
-      ...(status && status !== 'all' && { status }),
+      ...(statusFilter && { status: statusFilter }),
       ...(issuedBy && issuedBy !== 'all' && issuedBy !== 'Unknown' && {
         issuedBy: {
           username: { contains: issuedBy }
@@ -1046,4 +1047,8 @@ function generatePermitCode(): string {
 function generatePaymentReference(): string {
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 8);
   return nanoid();
+}
+
+function isPermitStatus(status?: string): status is PermitStatus {
+  return status === 'active' || status === 'expired' || status === 'revoked'
 }

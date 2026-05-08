@@ -36,6 +36,7 @@ model User {
   approvedElections   Election[]        @relation("ElectionApprovedBy")
   role                Role              @relation(fields: [roleId], references: [id])
   studentSouvenirs    StudentSouvenir[]
+  verificationLogs    VerificationLog[]
 
   @@index([roleId], map: "User_roleId_fkey")
 }
@@ -61,6 +62,8 @@ model Student {
   updatedAt              DateTime                @updatedAt
   deletedAt              DateTime?
   GameUser               GameUser?
+  auth                   StudentAuth?
+  nfcCards               NfcCard[]               @relation("StudentNfcCards")
   payments               Payment[]
   permits                Permit[]
   pollOptions            PollOption[]
@@ -69,33 +72,105 @@ model Student {
   electionParticipations ElectionParticipation[]
   StudentIdea            StudentIdea[]
   studentSouvenirs       StudentSouvenir[]
+  verificationLogs       VerificationLog[]
 
   @@index([studentId])
   @@index([email])
 }
 
 model Permit {
-  id            Int      @id @default(autoincrement())
-  permitCode    String   @unique
-  originalCode  String   @unique
-  status        String   @default("active")
-  startDate     DateTime @default(now())
-  expiryDate    DateTime
-  amountPaid    Float
-  studentId     Int
-  issuedById    Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  permitHash    String?
-  cardDelivered Boolean  @default(false)
-  payment       Payment?
-  issuedBy      User?    @relation(fields: [issuedById], references: [id])
-  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id               Int               @id @default(autoincrement())
+  permitCode       String            @unique
+  originalCode     String            @unique
+  status           PermitStatus      @default(active)
+  startDate        DateTime          @default(now())
+  expiryDate       DateTime
+  amountPaid       Float
+  studentId        Int
+  issuedById       Int?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  permitHash       String?
+  cardDelivered    Boolean           @default(false)
+  payment          Payment?
+  issuedBy         User?             @relation(fields: [issuedById], references: [id])
+  student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  verificationLogs VerificationLog[]
 
   @@index([permitCode, status])
   @@index([permitHash, status])
+  @@index([status])
   @@index([issuedById], map: "Permit_issuedById_fkey")
   @@index([studentId], map: "Permit_studentId_fkey")
+}
+
+model StudentAuth {
+  id                Int       @id @default(autoincrement())
+  studentId         Int       @unique
+  username          String    @unique
+  email             String    @unique
+  passwordHash      String
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  lastFailedLoginAt DateTime?
+  loginCount        Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  student           Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([username])
+  @@index([isActive])
+}
+
+model NfcCard {
+  /// NFC cards are assigned to students. Permits are resolved through the student during verification.
+  id               Int               @id @default(autoincrement())
+  studentId        Int
+  uidHash          String            @unique
+  uidLast4         String?
+  status           NfcCardStatus     @default(inactive)
+  issuedAt         DateTime?
+  activatedAt      DateTime?
+  deactivatedAt    DateTime?
+  replacedAt       DateTime?
+  lostAt           DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  student          Student           @relation("StudentNfcCards", fields: [studentId], references: [id], onDelete: Cascade)
+  verificationLogs VerificationLog[]
+
+  @@index([studentId])
+  @@index([uidHash])
+  @@index([status])
+  @@index([status, studentId])
+}
+
+model VerificationLog {
+  id             Int                @id @default(autoincrement())
+  method         VerificationMethod
+  result         VerificationResult
+  identifierHash String?
+  reason         String?            @db.Text
+  metadata       Json?
+  studentId      Int?
+  permitId       Int?
+  cardId         Int?
+  verifierUserId Int?
+  createdAt      DateTime           @default(now())
+  card           NfcCard?           @relation(fields: [cardId], references: [id])
+  permit         Permit?            @relation(fields: [permitId], references: [id])
+  student        Student?           @relation(fields: [studentId], references: [id])
+  verifierUser   User?              @relation(fields: [verifierUserId], references: [id])
+
+  @@index([studentId])
+  @@index([permitId])
+  @@index([cardId])
+  @@index([verifierUserId])
+  @@index([createdAt])
+  @@index([method, createdAt])
+  @@index([result, createdAt])
+  @@index([studentId, createdAt])
 }
 
 model AuditLog {
@@ -420,20 +495,20 @@ model Election {
 }
 
 model ElectionPosition {
-  id          Int                    @id @default(autoincrement())
-  electionId  Int
-  title       String
-  description String?                @db.Text
-  sortOrder   Int                    @default(0)
-  seatCount   Int                    @default(1)
-  votingMode  PositionVotingMode     @default(CANDIDATE_SELECTION)
-  approvalNotice String?             @db.Text
-  outcomeStatus PositionOutcomeStatus @default(PENDING)
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  election    Election               @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  candidates  ElectionCandidate[]
-  choices     ElectionBallotChoice[]
+  id             Int                    @id @default(autoincrement())
+  electionId     Int
+  title          String
+  description    String?                @db.Text
+  sortOrder      Int                    @default(0)
+  seatCount      Int                    @default(1)
+  votingMode     PositionVotingMode     @default(CANDIDATE_SELECTION)
+  approvalNotice String?                @db.Text
+  outcomeStatus  PositionOutcomeStatus  @default(PENDING)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  election       Election               @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidates     ElectionCandidate[]
+  choices        ElectionBallotChoice[]
 
   @@index([electionId])
 }
@@ -482,14 +557,14 @@ model ElectionBallot {
 }
 
 model ElectionBallotChoice {
-  id               Int               @id @default(autoincrement())
+  id               Int                @id @default(autoincrement())
   ballotId         Int
   positionId       Int
   candidateId      Int?
   approvalDecision ApprovalDecision?
-  ballot           ElectionBallot    @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  ballot           ElectionBallot     @relation(fields: [ballotId], references: [id], onDelete: Cascade)
   candidate        ElectionCandidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  position         ElectionPosition  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  position         ElectionPosition   @relation(fields: [positionId], references: [id], onDelete: Cascade)
 
   @@unique([ballotId, positionId])
   @@index([ballotId])
@@ -517,6 +592,39 @@ enum PaymentStatus {
   SUCCESS
   FAILED
   CANCELLED
+}
+
+enum PermitStatus {
+  active
+  expired
+  revoked
+}
+
+enum NfcCardStatus {
+  active
+  inactive
+  lost
+  stolen
+  replaced
+  damaged
+}
+
+enum VerificationMethod {
+  student_id
+  nfc
+  qr
+  permit_code
+}
+
+enum VerificationResult {
+  valid
+  invalid
+  expired
+  revoked
+  not_found
+  card_inactive
+  mismatch
+  error
 }
 
 enum SubscriptionStatus {

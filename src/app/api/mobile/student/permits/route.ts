@@ -3,10 +3,15 @@ import prisma from '@/lib/prisma/client'
 import { requireStudentUser } from '@/lib/mobile/auth'
 import { mobileSuccess } from '@/lib/mobile/api-response'
 import { handleMobileRouteError } from '@/lib/mobile/route-helpers'
+import { expireStaleActivePermits } from '@/lib/permit-expiration'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requireStudentUser(request)
+    await expireStaleActivePermits({
+      student: { studentId: user.studentId, deletedAt: null }
+    })
+
     const student = await prisma.student.findUnique({
       where: { studentId: user.studentId },
       include: {

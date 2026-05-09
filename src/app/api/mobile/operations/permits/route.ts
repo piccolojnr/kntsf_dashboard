@@ -5,6 +5,7 @@ import { requireOperationsUser } from '@/lib/mobile/auth'
 import { mobileSuccess } from '@/lib/mobile/api-response'
 import { handleMobileRouteError } from '@/lib/mobile/route-helpers'
 import { buildPagination, getPagination } from '@/lib/mobile/pagination'
+import { expireStaleActivePermits } from '@/lib/permit-expiration'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,9 +17,8 @@ export async function GET(request: NextRequest) {
     const status = isPermitStatus(statusParam) ? statusParam : undefined
     const { page, limit, skip } = getPagination(searchParams)
 
-    const where: Prisma.PermitWhereInput = {
+    const baseWhere: Prisma.PermitWhereInput = {
       student: { deletedAt: null },
-      ...(status ? { status } : {}),
       ...(search
         ? {
             OR: [
@@ -28,6 +28,12 @@ export async function GET(request: NextRequest) {
             ]
           }
         : {})
+    }
+    await expireStaleActivePermits(baseWhere)
+
+    const where: Prisma.PermitWhereInput = {
+      ...baseWhere,
+      ...(status ? { status } : {})
     }
 
     const [total, permits] = await Promise.all([

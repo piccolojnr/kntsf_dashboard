@@ -12,11 +12,13 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl
     const search = searchParams.get('search')?.trim()
+    const exactStudentId = searchParams.get('studentId')?.trim()
     const { page, limit, skip } = getPagination(searchParams)
 
     const where: Prisma.StudentWhereInput = {
       deletedAt: null,
-      ...(search
+      ...(exactStudentId ? { studentId: exactStudentId } : {}),
+      ...(!exactStudentId && search
         ? {
             OR: [
               { studentId: { contains: search } },
